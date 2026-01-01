@@ -589,7 +589,7 @@ _type:  addi sp, sp, -3*cell
         addi dp, dp, 2*cell
 1:      beqz x15, 2f
         push_tos
-        lb tos, 0(x14)
+        lbu tos, 0(x14)
         scsp x15, 1*cell(sp)
         scsp x14, 2*cell(sp)
         call _emit
@@ -614,7 +614,7 @@ _serial_type:
         addi dp, dp, 2*cell
 1:      beqz x15, 2f
         push_tos
-        lb tos, 0(x14)
+        lbu tos, 0(x14)
         scsp x15, 1*cell(sp)
         scsp x14, 2*cell(sp)
         call _serial_emit
@@ -630,7 +630,7 @@ _serial_type:
 
 	# Convert a cstring to a string
 	define_word "count", visible_flag
-_count:	lb x15, 0(tos)
+_count:	lbu x15, 0(tos)
         addi tos, tos, 1
         push_tos
         mv tos, x15
@@ -1193,7 +1193,7 @@ _store_double:
 	define_word "c+!", visible_flag
 _add_store_1:
         lc x15, 0(dp)
-        lb x14, 0(tos)
+        lbu x14, 0(tos)
         add x14, x14, x15
         sb x14, 0(tos)
         lc tos, cell(dp)
@@ -1205,7 +1205,7 @@ _add_store_1:
 	define_word "h+!", visible_flag
 _add_store_2:	
         lc x15, 0(dp)
-        lh x14, 0(tos)
+        lhu x14, 0(tos)
         add x14, x14, x15
         sh x14, 0(tos)
         lc tos, cell(dp)
@@ -1267,7 +1267,7 @@ _bit:	mv x15, tos
 	define_word "cbis!", visible_flag | inlined_flag
 _bit_set_1:
         lc x15, 0(dp)
-        lb x14, 0(tos)
+        lbu x14, 0(tos)
         or x14, x14, x15
         sb x14, 0(tos)
         lc tos, cell(dp)
@@ -1279,7 +1279,7 @@ _bit_set_1:
 	define_word "hbis!", visible_flag | inlined_flag
 _bit_set_2:
         lc x15, 0(dp)
-        lh x14, 0(tos)
+        lhu x14, 0(tos)
         or x14, x14, x15
         sh x14, 0(tos)
         lc tos, cell(dp)
@@ -1315,7 +1315,7 @@ _bit_set_cell:
 	define_word "cbic!", visible_flag | inlined_flag
 _bit_clear_1:
         lc x15, 0(dp)
-        lb x14, 0(tos)
+        lbu x14, 0(tos)
         andn x14, x14, x15
         sb x14, 0(tos)
         lc tos, cell(dp)
@@ -1327,7 +1327,7 @@ _bit_clear_1:
 	define_word "hbic!", visible_flag | inlined_flag
 _bit_clear_2:
         lc x15, 0(dp)
-        lh x14, 0(tos)
+        lhu x14, 0(tos)
         andn x14, x14, x15
         sh x14, 0(tos)
         lc tos, cell(dp)
@@ -1365,7 +1365,7 @@ _bit_clear_cell:
         define_word "cxor!", visible_flag | inlined_flag
 _xor_set_1:
         lc x15, 0(dp)
-        lb x14, 0(tos)
+        lbu x14, 0(tos)
         xor x14, x14, x15
         sb x14, 0(tos)
         lc tos, cell(dp)
@@ -1377,7 +1377,7 @@ _xor_set_1:
         define_word "hxor!", visible_flag | inlined_flag
 _xor_set_2:
         lc x15, 0(dp)
-        lh x14, 0(tos)
+        lhu x14, 0(tos)
         xor x14, x14, x15
         sh x14, 0(tos)
         lc tos, cell(dp)
@@ -1413,7 +1413,7 @@ _xor_set_cell:
 	define_word "cbit@", visible_flag | inlined_flag
 _bit_test_1:
         lc x15, 0(dp)
-        lb tos, 0(tos)
+        lbu tos, 0(tos)
         and tos, tos, x15
         snez tos, tos
         sub tos, zero, tos
@@ -1425,7 +1425,7 @@ _bit_test_1:
 	define_word "hbit@", visible_flag | inlined_flag
 _bit_test_2:
         lc x15, 0(dp)
-        lh tos, 0(tos)
+        lhu tos, 0(tos)
         and tos, tos, x15
         snez tos, tos
         sub tos, zero, tos
@@ -1459,13 +1459,13 @@ _bit_test_cell:
 
 	## Get a byte
 	define_word "c@", visible_flag | inlined_flag
-_get_1: lb tos, 0(tos)
+_get_1: lbu tos, 0(tos)
 	ret
 	end_inlined
 
 	## Get a halfword
 	define_word "h@", visible_flag | inlined_flag
-_get_2: lh tos, 0(tos)
+_get_2: lhu tos, 0(tos)
 	ret
 	end_inlined
 
@@ -2144,7 +2144,7 @@ _current_comma_cstring:
         pull_tos
 2:      beqz x15, 1f
         push_tos
-        lb tos, 0(x14)
+        lbu tos, 0(x14)
         ssp x15, 1*cell(sp)
         ssp x14, 2*cell(sp)
         call _current_comma_1
@@ -2291,7 +2291,7 @@ _get_order:
         addi x13, x13, -2
         addi x15, x15, -2
         push_tos
-        lh tos, 0(x15)
+        lhu tos, 0(x15)
         j 3b
 4:      push_tos
         mv tos, x14
