@@ -1156,10 +1156,20 @@ _store_2:
         addi dp, dp 2*cell
         ret
 	end_inlined
-
-	## Store a word
-	define_word "!", visible_flag | fold_flag
+                
+        ## Store a word
+	define_word "w!", visible_flag | fold_flag
 _store_4:
+        lc x15, 0(dp)
+        sw x15, 0(tos)
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        ret
+	end_inlined
+
+	## Store a cell
+	define_word "!", visible_flag | fold_flag
+_store_cell:
         lc x15, 0(dp)
         sc x15, 0(tos)
         lc tos, cell(dp)
@@ -1167,9 +1177,9 @@ _store_4:
         ret
 	end_inlined
 
-	## Store a doubleword
+	## Store a double cell
 	define_word "2!", visible_flag
-_store_8:
+_store_double:
         lc x15, 0(dp)
         lc x14, cell(dp)
         sc x15, 0(tos)
@@ -1204,8 +1214,20 @@ _add_store_2:
 	end_inlined
 
 	## Read a word from an address, add a value, and write it back
-	define_word "+!", visible_flag
+	define_word "w+!", visible_flag
 _add_store_4:	
+        lc x15, 0(dp)
+        lw x14, 0(tos)
+        add x14, x14, x15
+        sw x14, 0(tos)
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        ret
+	end_inlined
+
+	## Read a cell from an address, add a value, and write it back
+	define_word "+!", visible_flag
+_add_store_cell:	
         lc x15, 0(dp)
         lc x14, 0(tos)
         add x14, x14, x15
@@ -1215,9 +1237,9 @@ _add_store_4:
         ret
 	end_inlined
 
-        ## Read a double word from an address, add a value, and write it back
+        ## Read a double cell from an address, add a value, and write it back
         define_word "2+!", visible_flag
-_add_store_8:
+_add_store_double:
         lc x13, 0(dp)
         lc x12, cell(dp)
         lc x14, cell(tos)
@@ -1266,8 +1288,20 @@ _bit_set_2:
 	end_inlined
 
 	## Bit set a word
-	define_word "bis!", visible_flag | inlined_flag
+	define_word "wbis!", visible_flag | inlined_flag
 _bit_set_4:
+        lc x15, 0(dp)
+        lw x14, 0(tos)
+        or x14, x14, x15
+        sw x14, 0(tos)
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        ret
+	end_inlined
+
+	## Bit set a cell
+	define_word "bis!", visible_flag | inlined_flag
+_bit_set_cell:
         lc x15, 0(dp)
         lc x14, 0(tos)
         or x14, x14, x15
@@ -1304,8 +1338,20 @@ _bit_clear_2:
 	.ltorg
 	
 	## Bit clear a word
-	define_word "bic!", visible_flag | inlined_flag
+	define_word "wbic!", visible_flag | inlined_flag
 _bit_clear_4:
+        lc x15, 0(dp)
+        lw x14, 0(tos)
+        andn x14, x14, x15
+        sw x14, 0(tos)
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        ret
+	end_inlined
+
+	## Bit clear a cell
+	define_word "bic!", visible_flag | inlined_flag
+_bit_clear_cell:
         lc x15, 0(dp)
         lc x14, 0(tos)
         andn x14, x14, x15
@@ -1343,6 +1389,18 @@ _xor_set_2:
         define_word "xor!", visible_flag | inlined_flag
 _xor_set_4:
         lc x15, 0(dp)
+        lw x14, 0(tos)
+        xor x14, x14, x15
+        sw x14, 0(tos)
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        ret
+        end_inlined
+
+        # Load, exclusive-or, and store a cell
+        define_word "xor!", visible_flag | inlined_flag
+_xor_set_cell:
+        lc x15, 0(dp)
         lc x14, 0(tos)
         xor x14, x14, x15
         sc x14, 0(tos)
@@ -1354,67 +1412,84 @@ _xor_set_4:
 	# Test for bits in a byte
 	define_word "cbit@", visible_flag | inlined_flag
 _bit_test_1:
-	movs r0, tos
-	pull_tos
-	ldrb r0, [r0]
-	ands tos, r0
-	subs tos, #1
-	sbcs tos, tos
-	mvns tos, tos
-	bx lr
+        lc x15, 0(dp)
+        lb tos, 0(tos)
+        and tos, tos, x15
+        snez tos, tos
+        sub tos, zero, tos
+        addi dp, dp, cell
+        ret
 	end_inlined
 
 	# Test for bits in a halfword
 	define_word "hbit@", visible_flag | inlined_flag
 _bit_test_2:
-	movs r0, tos
-	pull_tos
-	ldrh r0, [r0]
-	ands tos, r0
-	subs tos, #1
-	sbcs tos, tos
-	mvns tos, tos
-	bx lr
+        lc x15, 0(dp)
+        lh tos, 0(tos)
+        and tos, tos, x15
+        snez tos, tos
+        sub tos, zero, tos
+        addi dp, dp, cell
+        ret
 	end_inlined
 
 	# Test for bits in a word
-	define_word "bit@", visible_flag | inlined_flag
+	define_word "wbit@", visible_flag | inlined_flag
 _bit_test_4:
-	movs r0, tos
-	pull_tos
-	ldr r0, [r0]
-	ands tos, r0
-	subs tos, #1
-	sbcs tos, tos
-	mvns tos, tos
-	bx lr
+        lc x15, 0(dp)
+        lw tos, 0(tos)
+        and tos, tos, x15
+        snez tos, tos
+        sub tos, zero, tos
+        addi dp, dp, cell
+        ret
+	end_inlined
+
+	# Test for bits in a cell
+	define_word "bit@", visible_flag | inlined_flag
+_bit_test_cell:
+        lc x15, 0(dp)
+        lc tos, 0(tos)
+        and tos, tos, x15
+        snez tos, tos
+        sub tos, zero, tos
+        addi dp, dp, cell
+        ret
 	end_inlined
 
 	## Get a byte
 	define_word "c@", visible_flag | inlined_flag
-_get_1: ldrb tos, [tos]
-	bx lr
+_get_1: lb tos, 0(tos)
+	ret
 	end_inlined
 
 	## Get a halfword
 	define_word "h@", visible_flag | inlined_flag
-_get_2: ldrh tos, [tos]
-	bx lr
+_get_2: lh tos, 0(tos)
+	ret
 	end_inlined
 
 	## Get a word
+	define_word "w@", visible_flag | inlined_flag
+_get_4: lw tos, 0(tos)
+	ret
+	end_inlined
+
+	## Get a cell
 	define_word "@", visible_flag | inlined_flag
-_get_4: ldr tos, [tos]
-	bx lr
+_get_cell:
+        lc tos, 0(tos)
+	ret
 	end_inlined
 
 	## Get a doubleword
 	define_word "2@", visible_flag
-_get_8:	ldr r0, [tos]
-	ldr tos, [tos, #4]
-	push_tos
-	movs tos, r0
-	bx lr
+_get_double:
+        lc x15, 0(tos)
+        lc tos, cell(tos)
+        push_tos
+        mv tos, x15
+        ret
 	end_inlined
 
 .ltorg
@@ -1422,834 +1497,997 @@ _get_8:	ldr r0, [tos]
 	## Store a byte at the RAM HERE location
 	define_word "cram,", visible_flag
 _comma_1:
-	push {lr}
-	bl _cpu_offset
-	ldr r0, =dict_base
-	adds r0, tos
-	ldr r0, [r0]
-	adds r0, #ram_here_offset
-	pull_tos
-	ldr r1, [r0]
-	strb tos, [r1], #1
-	str r1, [r0]
-	pull_tos
-	pop {pc}
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        sb tos, 0(x14)
+        addi x14, x14, 1
+        str x14, 0(x15)
+        pull_tos
+        pop ra
+        ret
 	end_inlined
 
 	## Store a halfword at the RAM HERE location
 	define_word "hram,", visible_flag
 _comma_2:
-	push {lr}
-	bl _cpu_offset
-	ldr r0, =dict_base
-	adds r0, tos
-	ldr r0, [r0]
-	adds r0, #ram_here_offset
-	pull_tos
-	ldr r1, [r0]
-	strh tos, [r1], #2
-	str r1, [r0]
-	pull_tos
-	pop {pc}
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        sh tos, 0(x14)
+        addi x14, x14, 2
+        str x14, 0(x15)
+        pull_tos
+        pop ra
+        ret
 	end_inlined
 
 	## Store a word at the RAM HERE location
-	define_word "ram,", visible_flag
+	define_word "wram,", visible_flag
 _comma_4:
-	push {lr}
-	bl _cpu_offset
-	ldr r0, =dict_base
-	adds r0, tos
-	ldr r0, [r0]
-	adds r0, #ram_here_offset
-	pull_tos
-	ldr r1, [r0]
-	str tos, [r1], #4
-	str r1, [r0]
-	pull_tos
-	pop {pc}
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        sw tos, 0(x14)
+        addi x14, x14, 4
+        str x14, 0(x15)
+        pull_tos
+        pop ra
+        ret
+	end_inlined
+
+	## Store a cell at the RAM HERE location
+	define_word "ram,", visible_flag
+_comma_cell:
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        sc tos, 0(x14)
+        addi x14, x14, cell
+        str x14, 0(x15)
+        pull_tos
+        pop ra
+        ret
 	end_inlined
 	
 	## Store a doubleword at the RAM HERE location
 	define_word "2ram,", visible_flag
-_comma_8:
-	push {lr}
-	bl _cpu_offset
-	ldr r0, =dict_base
-	adds r0, tos
-	ldr r0, [r0]
-	adds r0, #ram_here_offset
-	pull_tos
-	ldr r1, [r0]
-	str tos, [r1], #4
-	pull_tos
-	str tos, [r1], #4
-	str r1, [r0]
-	pull_tos
-	pop {pc}
+_comma_double:
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        sc tos, 0(x14)
+        pull_tos
+        sc tos, cell(x14)
+        addi x14, x14, 2*cell
+        str x14, 0(x15)
+        pull_tos
+        pop ra
+        ret
 	end_inlined
 
 	## Store a byte at the flash HERE location
 	define_word "cflash,", visible_flag
 _flash_comma_1:
-	push {lr}
-	ldr r0, =flash_here
-	push_tos
-	ldr tos, [r0]
-	push {r0, tos}
-	bl _store_flash_1
-	pop {r0, r1}
-	adds r1, #1
-	str r1, [r0]
-	pop {pc}
+        addi sp, sp, -3*cell
+        ssp ra, 0(sp)
+        li x15, flash_here
+        push_tos
+        lc tos, 0(x15)
+        ssp x15, 1*cell(sp)
+        ssp tos, 2*cell(sp)
+        call _store_flash_1
+        lsp x15, 1*cell(sp)
+        lsp x14, 2*cell(sp)
+        addi x14, x14, 1
+        sc x14, 0(x15)
+        lsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
 
 	## Store a halfword at the flash HERE location
 	define_word "hflash,", visible_flag
 _flash_comma_2:
-	push {lr}
-	ldr r0, =flash_here
-	push_tos
-	ldr tos, [r0]
-	push {r0, tos}
-	bl _store_flash_2
-	pop {r0, r1}
-	adds r1, #2
-	str r1, [r0]
-	pop {pc}
+        addi sp, sp, -3*cell
+        ssp ra, 0(sp)
+        li x15, flash_here
+        push_tos
+        lc tos, 0(x15)
+        ssp x15, 1*cell(sp)
+        ssp tos, 2*cell(sp)
+        call _store_flash_2
+        lsp x15, 1*cell(sp)
+        lsp x14, 2*cell(sp)
+        addi x14, x14, 2
+        sc x14, 0(x15)
+        lsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
+	end_inlined
+
+	## Store a word at the flash HERE location
+	define_word "wflash,", visible_flag
+_flash_comma_4:
+        addi sp, sp, -3*cell
+        ssp ra, 0(sp)
+        li x15, flash_here
+        push_tos
+        lc tos, 0(x15)
+        ssp x15, 1*cell(sp)
+        ssp tos, 2*cell(sp)
+        call _store_flash_4
+        lsp x15, 1*cell(sp)
+        lsp x14, 2*cell(sp)
+        addi x14, x14, 4
+        sc x14, 0(x15)
+        lsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
 
 	## Store a word at the flash HERE location
 	define_word "flash,", visible_flag
-_flash_comma_4:
-	push {lr}
-	ldr r0, =flash_here
-	push_tos
-	ldr tos, [r0]
-	push {r0, tos}
-	bl _store_flash_4
-	pop {r0, r1}
-	adds r1, #4
-	str r1, [r0]
-	pop {pc}
+_flash_comma_cell:
+        addi sp, sp, -3*cell
+        ssp ra, 0(sp)
+        li x15, flash_here
+        push_tos
+        lc tos, 0(x15)
+        ssp x15, 1*cell(sp)
+        ssp tos, 2*cell(sp)
+        call _store_flash_cell
+        lsp x15, 1*cell(sp)
+        lsp x14, 2*cell(sp)
+        addi x14, x14, cell
+        sc x14, 0(x15)
+        lsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
 
 	## Store a doubleword at the flash HERE location
 	define_word "2flash,", visible_flag
-_flash_comma_8:
-	push {lr}
-	ldr r0, =flash_here
-	push_tos
-	ldr tos, [r0]
-	push {r0, tos}
-	bl _store_flash_8
-	pop {r0, r1}
-	adds r1, #8
-	str r1, [r0]
-	pop {pc}
+_flash_comma_double:
+        addi sp, sp, -3*cell
+        ssp ra, 0(sp)
+        li x15, flash_here
+        push_tos
+        lc tos, 0(x15)
+        ssp x15, 1*cell(sp)
+        ssp tos, 2*cell(sp)
+        call _store_flash_double
+        lsp x15, 1*cell(sp)
+        lsp x14, 2*cell(sp)
+        addi x14, x14, 2*cell
+        sc x14, 0(x15)
+        lsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
 
 	## Store a byte to RAM or to flash
 	define_word "ccurrent!", visible_flag
 _store_current_1:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _store_1
-	pop {pc}
-1:	bl _store_flash_1
-	pop {pc}
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _store_1
+        j 2f
+1:      call _store_flash_1
+2:      pop ra
+        ret
 	end_inlined
 
 	## Store a halfword to RAM or to flash
 	define_word "hcurrent!", visible_flag
 _store_current_2:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _store_2
-	pop {pc}
-1:	bl _store_flash_2
-	pop {pc}
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _store_2
+        j 2f
+1:      call _store_flash_2
+2:      pop ra
+        ret
 	end_inlined
 
 	## Store a word to RAM or to flash
-	define_word "current!", visible_flag
+	define_word "wcurrent!", visible_flag
 _store_current_4:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _store_4
-	pop {pc}
-1:	bl _store_flash_4
-	pop {pc}
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _store_4
+        j 2f
+1:      call _store_flash_4
+2:      pop ra
+        ret
 	end_inlined
 
-	## Store a doubleword to RAM or to flash
+	## Store a cell to RAM or to flash
+	define_word "current!", visible_flag
+_store_current_cell:
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _store_cell
+        j 2f
+1:      call _store_flash_cell
+2:      pop ra
+        ret
+	end_inlined
+
+	## Store a double cell to RAM or to flash
 	define_word "2current!", visible_flag
-_store_current_8:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _store_8
-	pop {pc}
-1:	bl _store_flash_8
-	pop {pc}
+_store_current_double:
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _store_double
+        j 2f
+1:      call _store_flash_double
+2:      pop ra
+        ret
 	end_inlined
 
 	## Store a byte to the RAM or flash HERE location
 	define_word "c,", visible_flag
 _current_comma_1:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _comma_1
-	pop {pc}
-1:	bl _flash_comma_1
-	pop {pc}
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _comma_1
+        j 2f
+1:      call _flash_comma_1
+2:      pop ra
+        ret
 	end_inlined
 
 	## Store a halfword to the RAM or flash HERE location
 	define_word "h,", visible_flag
 _current_comma_2:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _comma_2
-	pop {pc}
-1:	bl _flash_comma_2
-	pop {pc}
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _comma_2
+        j 2f
+1:      call _flash_comma_2
+2:      pop ra
+        ret
+	end_inlined
+
+	## Store a word to the RAM or flash HERE location
+	define_word "w,", visible_flag
+_current_comma_4:
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _comma_4
+        j 2f
+1:      call _flash_comma_4
+2:      pop ra
+        ret
 	end_inlined
 
 	## Store a word to the RAM or flash HERE location
 	define_word ",", visible_flag
-_current_comma_4:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _comma_4
-	pop {pc}
-1:	bl _flash_comma_4
-	pop {pc}
+_current_comma_cell:
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _comma_cell
+        j 2f
+1:      call _flash_comma_cell
+2:      pop ra
+        ret
 	end_inlined
 
 	## Store a doubleword to the RAM or flash HERE location
 	define_word "2,", visible_flag
-_current_comma_8:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _comma_8
-	pop {pc}
-1:	bl _flash_comma_8
-	pop {pc}
+_current_comma_double:
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _comma_double
+        j 2f
+1:      call _flash_comma_double
+2:      pop ra
+        ret
 	end_inlined
 
 	## Reserve a byte at the RAM HERE location
 	define_word "cram-reserve", visible_flag
 _reserve_1:
-	push {lr}
-	bl _cpu_offset
-	ldr r0, =dict_base
-	adds r0, tos
-	ldr r0, [r0]
-	adds r0, #ram_here_offset
-	pull_tos
-	ldr r1, [r0]
-	push_tos
-	movs tos, r1
-	adds r1, #1
-	str r1, [r0]
-	pop {pc}
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, 1
+        sc x14, 0(x15)
+        pop ra
+        ret
 	end_inlined
 
 	## Reserve a halfword at the RAM HERE location
 	define_word "hram-reserve", visible_flag
 _reserve_2:
-	push {lr}
-	bl _cpu_offset
-	ldr r0, =dict_base
-	adds r0, tos
-	ldr r0, [r0]
-	adds r0, #ram_here_offset
-	pull_tos
-	ldr r1, [r0]
-	push_tos
-	movs tos, r1
-	adds r1, #2
-	str r1, [r0]
-	pop {pc}
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, 2
+        sc x14, 0(x15)
+        pop ra
+        ret
+	end_inlined
+
+	## Reserve a word at the RAM HERE location
+	define_word "wram-reserve", visible_flag
+_reserve_4:
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, 4
+        sc x14, 0(x15)
+        pop ra
+        ret
 	end_inlined
 
 	## Reserve a word at the RAM HERE location
 	define_word "ram-reserve", visible_flag
-_reserve_4:
-	push {lr}
-	bl _cpu_offset
-	ldr r0, =dict_base
-	adds r0, tos
-	ldr r0, [r0]
-	adds r0, #ram_here_offset
-	pull_tos
-	ldr r1, [r0]
-	push_tos
-	movs tos, r1
-	adds r1, #4
-	str r1, [r0]
-	pop {pc}
+_reserve_cell:
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, cell
+        sc x14, 0(x15)
+        pop ra
+        ret
 	end_inlined
 
-	## Reserve a doubleword at the RAM HERE location
+	## Reserve a double cell at the RAM HERE location
 	define_word "2ram-reserve", visible_flag
-_reserve_8:
-	push {lr}
-	bl _cpu_offset
-	ldr r0, =dict_base
-	adds r0, tos
-	ldr r0, [r0]
-	adds r0, #ram_here_offset
-	pull_tos
-	ldr r1, [r0]
-	push_tos
-	movs tos, r1
-	adds r1, #8
-	str r1, [r0]
-	pop {pc}
+_reserve_double:
+        push ra
+        call _cpu_offset
+        li x15, dict_base
+        add x15, x15, tos
+        lc x15, 0(x15)
+        addi x15, x15, ram_here_offset
+        pull_tos
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, 2*cell
+        sc x14, 0(x15)
+        pop ra
+        ret
 	end_inlined
 
 	## Reserve a byte at the flash HERE location
 	define_word "cflash-reserve", visible_flag
 _flash_reserve_1:
-	ldr r0, =flash_here
-	ldr r1, [r0]
-	push_tos
-	movs tos, r1
-	adds r1, #1
-	str r1, [r0]
-	bx lr
+        li x15, flash_here
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, 1
+        sc x14, 0(x15)
+        ret
 	end_inlined
 
 	## Reserve a halfword at the flash HERE location
 	define_word "hflash-reserve", visible_flag
 _flash_reserve_2:
-	ldr r0, =flash_here
-	ldr r1, [r0]
-	push_tos
-	movs tos, r1
-	adds r1, #2
-	str r1, [r0]
-	bx lr
+        li x15, flash_here
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, 2
+        sc x14, 0(x15)
+        ret
 	end_inlined
 
 	## Reserve a word at the flash HERE location
-	define_word "flash-reserve", visible_flag
+	define_word "wflash-reserve", visible_flag
 _flash_reserve_4:
-	ldr r0, =flash_here
-	ldr r1, [r0]
-	push_tos
-	movs tos, r1
-	adds r1, #4
-	str r1, [r0]
-	bx lr
+        li x15, flash_here
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, 4
+        sc x14, 0(x15)
+        ret
 	end_inlined
 
-	## Reserve a doubleword at the flash HERE location
+	## Reserve a cell at the flash HERE location
+	define_word "flash-reserve", visible_flag
+_flash_reserve_cell:
+        li x15, flash_here
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, cell
+        sc x14, 0(x15)
+        ret
+	end_inlined
+
+	## Reserve a double cell at the flash HERE location
 	define_word "2flash-reserve", visible_flag
-_flash_reserve_8:
-	ldr r0, =flash_here
-	ldr r1, [r0]
-	push_tos
-	movs tos, r1
-	adds r1, #8
-	str r1, [r0]
-	bx lr
+_flash_reserve_double:
+        li x15, flash_here
+        lc x14, 0(x15)
+        push_tos
+        mv tos, x14
+        addi x14, x14, 2*cell
+        sc x14, 0(x15)
+        ret
 	end_inlined
 
 	## Reserve a byte at the RAM or flash HERE location
 	define_word "creserve", visible_flag
 _current_reserve_1:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _reserve_1
-	pop {pc}
-1:	bl _flash_reserve_1
-	pop {pc}
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _reserve_1
+        j 2f
+1:      call _flash_reserve_1
+2:      pop ra
+        ret
 	end_inlined
 
 	## Reserve a halfword at the RAM or flash HERE location
 	define_word "hreserve", visible_flag
 _current_reserve_2:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _reserve_2
-	pop {pc}
-1:	bl _flash_reserve_2
-	pop {pc}
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _reserve_2
+        j 2f
+1:      call _flash_reserve_2
+2:      pop ra
+        ret
 	end_inlined
 
 	## Reserve a word at the RAM or flash HERE location
-	define_word "reserve", visible_flag
+	define_word "wreserve", visible_flag
 _current_reserve_4:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _reserve_4
-	pop {pc}
-1:	bl _flash_reserve_4
-	pop {pc}
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _reserve_4
+        j 2f
+1:      call _flash_reserve_4
+2:      pop ra
+        ret
 	end_inlined
 
-	## Reserve a doubleword at the RAM or flash HERE location
+	## Reserve a cell at the RAM or flash HERE location
+	define_word "reserve", visible_flag
+_current_reserve_cell:
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _reserve_cell
+        j 2f
+1:      call _flash_reserve_cell
+2:      pop ra
+        ret
+	end_inlined
+
+	## Reserve a double cell at the RAM or flash HERE location
 	define_word "2reserve", visible_flag
-_current_reserve_8:
-	push {lr}
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 1f
-	bl _reserve_8
-	pop {pc}
-1:	bl _flash_reserve_8
-	pop {pc}
+_current_reserve_double:
+        push ra
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        bnez x15, 1f
+        call _reserve_double
+        j 2f
+1:      call _flash_reserve_double
+2:      pop ra
+        ret
 	end_inlined
 
 	## Align to a power of two
 	define_word "align,", visible_flag
 _current_comma_align:
-	push {lr}
-	subs tos, #1
-	movs r0, tos
-	pull_tos
-1:	push {r0}
-	bl _current_here
-	pop {r0}
-	ands tos, r0
-	beq 2f
-	movs tos, #0
-	push {r0}
-	bl _current_comma_1
-	pop {r0}
-	b 1b
-2:	pull_tos
-	pop {pc}
-	end_inlined
+        addi sp, sp, -2*cell
+        ssp ra, 0(sp)
+        addi tos, tos, -1
+        mv x15, tos
+        pull_tos
+1:      ssp x15, cell(sp)
+        call _current_here
+        lsp x15, cell(sp)
+        and tos, tos, x15
+        beqz tos, 2f
+        li tos, 0
+        ssp x15, cell(sp)
+        call _current_comma_1
+        lsp x15, cell(sp)
+        j 1b
+2:      pull_tos
+        lsp ra, 0(sp)
+        addi sp, sp, 2*cell
+        ret
+        end_inlined
 
 	## Align to a power of two
 	define_word "flash-align,", visible_flag
 _flash_comma_align:
-	push {lr}
-	subs tos, #1
-	movs r0, tos
-	pull_tos
-1:	push {r0}
-	bl _flash_here
-	pop {r0}
-	ands tos, r0
-	beq 2f
-	movs tos, #0
-	push {r0}
-	bl _flash_comma_1
-	pop {r0}
-	b 1b
-2:	pull_tos
-	pop {pc}
+        addi sp, sp, -2*cell
+        ssp ra, 0(sp)
+        addi tos, tos, -1
+        mv x15, tos
+        pull_tos
+1:      ssp x15, cell(sp)
+        call _flash_here
+        lsp x15, cell(sp)
+        and tos, tos, x15
+        beqz tos, 2f
+        li tos, 0
+        ssp x15, cell(sp)
+        call _flash_comma_1
+        lsp x15, cell(sp)
+        j 1b
+2:      pull_tos
+        lsp ra, 0(sp)
+        addi sp, sp, 2*cell
+        ret
 	end_inlined
 
 	## Align to a power of two
 	define_word "ram-align,", visible_flag
 _comma_align:
-	push {lr}
-	subs tos, #1
-	movs r0, tos
-	pull_tos
-1:	push {r0}
-	bl _here
-	pop {r0}
-	ands tos, r0
-	beq 2f
-	movs tos, #0
-	push {r0}
-	bl _comma_1
-	pop {r0}
-	b 1b
-2:	pull_tos
-	pop {pc}
+        addi sp, sp, -2*cell
+        ssp ra, 0(sp)
+        addi tos, tos, -1
+        mv x15, tos
+        pull_tos
+1:      ssp x15, cell(sp)
+        call _here
+        lsp x15, cell(sp)
+        and tos, tos, x15
+        beqz tos, 2f
+        li tos, 0
+        ssp x15, cell(sp)
+        call _comma_1
+        lsp x15, cell(sp)
+        j 1b
+2:      pull_tos
+        lsp ra, 0(sp)
+        addi sp, sp, 2*cell
+        ret
 	end_inlined
 
 	## Compile a c-string
 	define_word "cstring,", visible_flag
 _current_comma_cstring:
-	push {lr}
-	ldr r0, =255
-	cmp tos, r0
-	ble 1f
-	movs tos, r0
-1:	push_tos
-	bl _current_comma_1
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	pull_tos
-2:	cmp r0, #0
-	beq 1f
-	push_tos
-	ldrb tos, [r1]
-	push {r0, r1}
-	bl _current_comma_1
-	pop {r0, r1}
-	subs r0, #1
-	adds r1, #1
-	b 2b
-1:	pop {pc}
-	end_inlined
+        addi sp, sp, -3*cell
+        ssp ra, 0(sp)
+        li x15, 255
+        bltu tos, x15, 1f
+        mv tos, x15
+1:      push_tos
+        call _current_comma_1
+        mv x15, tos
+        pull_tos
+        mv x14, tos
+        pull_tos
+2:      beqz x15, 1f
+        push_tos
+        lb tos, 0(x14)
+        ssp x15, 1*cell(sp)
+        ssp x14, 2*cell(sp)
+        call _current_comma_1
+        lsp x14, 2*cell(sp)
+        lsp x15, 1*cell(sp)
+        addi x15, x15, -1
+        addi x14, x14, 1
+        j 2b
+1:      lsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
+        end_inlined
 
 	## Push a value onto the return stack
 	define_word ">r", visible_flag | inlined_flag
 _push_r:
-	push {tos}
-	pull_tos
-	bx lr
+        push tos
+        pull_tos
+        ret
 	end_inlined
 
 	## Pop a value off the return stack
 	define_word "r>", visible_flag | inlined_flag
 _pop_r:	push_tos
-	pop {tos}
-	bx lr
+        pop tos
+        ret
 	end_inlined
 
 	## Get a value off the return stack without popping it
 	define_word "r@", visible_flag | inlined_flag
 _get_r:	push_tos
-	ldr tos, [sp]
-	bx lr
+	ssp tos, 0(sp)
+	ret
 	end_inlined
 
 	## Drop a value from the return stack
 	define_word "rdrop", visible_flag | inlined_flag
-_rdrop:	adds sp, #4
-	bx lr
+_rdrop:	addi sp, sp, cell
+	ret
 	end_inlined
 
 	## Push two values onto the return stack
 	define_word "2>r", visible_flag | inlined_flag
 _push_2r:
-	ldr r0, [dp], #4
-        ldr r1, [dp], #4
-	push {tos}
-	push {r0}
-	movs tos, r1
-	bx lr
+        lc x15, 0(dp)
+        lc x14, cell(dp)
+        addi dp, dp, 2*cell
+        addi sp, sp, -2*cell
+        ssp tos, cell(sp)
+        ssp x15, 0(sp)
+        mv tos, x14
+        ret
 	end_inlined
 
 	## Pop two values off the return stack
 	define_word "2r>", visible_flag | inlined_flag
 _pop_2r:
-	push_tos
-	pop {r0, tos}
-	stmdb dp!, {r0}
-	bx lr
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        lsp tos, cell(sp)
+        lsp x15, 0(sp)
+        addi sp, sp, 2*cell
+        sc x15, 0(dp)
+        ret
 	end_inlined
 
 	## Get two values off the return stack without popping it
 	define_word "2r@", visible_flag | inlined_flag
 _get_2r:
-	push_tos
-	ldr tos, [sp, #4]
-	ldr r0, [sp, #0]
-	stmdb dp!, {r0}
-	bx lr
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        lsp tos, cell(sp)
+        lsp x15, 0(sp)
+        sc x15, 0(dp)
+        ret
 	end_inlined
 	
 	## Drop two values from the return stack
 	define_word "2rdrop", visible_flag | inlined_flag
 _2rdrop:
-	adds sp, #8
-	bx lr
+	addi sp, sp, 2*cell
+        ret
 	end_inlined
 
 	## Get the return stack pointer
 	define_word "rp@", visible_flag | inlined_flag
 _get_rp:
 	push_tos
-	mov tos, sp
-	bx lr
+        mv tos, sp
+        ret
 	end_inlined
 
 	## Set the return stack pointer
 	define_word "rp!", visible_flag | inlined_flag
 _store_rp:
-	mov sp, tos
+	mv sp, tos
 	pull_tos
-	bx lr
+	ret
 	end_inlined
 
 	## Get the data stack pointer
 	define_word "sp@", visible_flag | inlined_flag
 _get_sp:
 	push_tos
-	movs tos, dp
-	bx lr
+	mv tos, dp
+	ret
 	end_inlined
 
 	## Set the data stack pointer
 	define_word "sp!", visible_flag | inlined_flag
 _store_sp:
-	movs dp, tos
+	mv dp, tos
 	pull_tos
-	bx lr
+	ret
 	end_inlined
 
 	## Get the current compilation wordlist
 	define_word "get-current", visible_flag
 _get_current:
-	ldr r0, =wordlist
-	push_tos
-	ldr tos, [r0]
-	bx lr
+        li x15, wordlist
+        push_tos
+        lc tos, 0(x15)
+        ret
 	end_inlined
 
 	## Set the current compilation wordlist
 	define_word "set-current", visible_flag
 _set_current:
-	ldr r0, =wordlist
-	str tos, [r0]
-	pull_tos
-	bx lr
+        li x15, wordlist
+        sc tos, 0(x15)
+        pull_tos
+        ret
 	end_inlined
 
 	## Get the current wordlist order
 	define_word "get-order", visible_flag
 _get_order:
-  	ldr r0, =order
-	ldr r1, =order_count
-  	ldr r1, [r1]
-	lsls r2, r1, #1
-	adds r0, r2
-3:	cmp r2, #0
-	beq 4f
-	subs r2, #2
-	subs r0, #2
-	push_tos
-	ldrh tos, [r0]
-	b 3b
-4:	push_tos
-	movs tos, r1
-	bx lr
+        li x15, order
+        li x14, order_count
+        lc x14, 0(x14)
+        slli x13, x14, 1
+        add x15, x15, x13
+3:      beqz x13, 4f
+        addi x13, x13, -2
+        addi x15, x15, -2
+        push_tos
+        lh tos, 0(x15)
+        j 3b
+4:      push_tos
+        mv tos, x14
+        ret
 	end_inlined
 
 	## Set the current wordlist order
 	define_word "set-order", visible_flag
 _set_order:
-	ldr r0, =order
-	ldr r1, =order_count
-        cmp tos, #0
-        blt 5f
-2:	str tos, [r1]
-	movs r1, tos
-	pull_tos
-3:	cmp r1, #0
-	beq 4f
-	subs r1, #1
-	strh tos, [r0]
-	pull_tos
-	adds r0, #2
-	b 3b
-5:      movs tos, #1
-        subs dp, #4
-        movs r2, #0
-        str r2, [dp]
-        b 2b
-4:	bx lr
-	end_inlined
+        li x15, order
+        li x14, order_count
+        beqz tos, 5f
+2:      sc tos, 0(x14)
+        mv x14, tos
+        pull_tos
+3:      beqz x14, 4f
+        addi x14, x14, -1
+        sh tos, 0(x15)
+        pull_tos
+        addi x15, x15, 2
+        j 3b
+5:      li tos, 1
+        addi dp, dp, cell
+        li x13, 0
+        sc x13, 0(dp)
+        j 2b
+4:      ret
+        end_inlined
 
 	## Context switch ( ctx -- old-ctx )
 	define_internal_word "context-switch", visible_flag
 _context_switch:
-	movs r0, tos
-	pull_tos
-	push {r4, r5, r6, r7, r8, r9, r10}
-	mov r1, sp
-	mov sp, r0
-	pop {r4, r5, r6, r7, r8, r9, r10}
-	push_tos
-	movs tos, r1
-	bx lr
+        mv x15, tos
+        pull_tos
+        addi sp, sp, -2*cell
+        sc x8, 0(sp)
+        sc x9, cell(sp)
+        mv x14, sp
+        mv sp, x15
+        lc x8, 0(sp)
+        lc x9, cell(sp)
+        addi sp, sp, 2*cell
+        push_tos
+        mv tos, x14
+        ret
 	end_inlined
 
 	## Null exception handler
 	define_word "handle-null", visible_flag
 _handle_null:
-	bx lr
+	ret
 	end_inlined
 
 	## Initialize the variables
 	define_internal_word "init-variables", visible_flag
 _init_variables:
-	push {lr}
-	movs r1, #0
-	ldr r0, =xon_xoff_enabled
-	str r1, [r0]
-        ldr r0, =postpone_literal_q
-        str r1, [r0]
-	ldr r1, =-1
-	ldr r0, =ack_nak_enabled
-	str r1, [r0]
-	ldr r0, =bel_enabled
-	str r1, [r0]
-        ldr r0, =color_enabled
-        str r1, [r0]
-        ldr r0, =uart_special_enabled
-        str r1, [r0]
-        ldr r1, =syntax_stack + syntax_stack_size
-        ldr r0, =syntax_stack_ptr
-        str r1, [r0]
-        ldr r0, =ram_current
+        push ra
+	li x14, 0
+	li x15, xon_xoff_enabled
+	sc x14, 0(x15)
+        li x15, postpone_literal_q
+        sc x14, 0(x15)
+	li x14, -1
+	li x15, ack_nak_enabled
+	sc x14, 0(x15)
+	li x15, bel_enabled
+	sc x14, 0(x15)
+        li x15, color_enabled
+        sc x14, 0(x15)
+        li x15, uart_special_enabled
+        sc x14, 0(x15)
+        li x14, syntax_stack + syntax_stack_size
+        li x15, syntax_stack_ptr
+        sc x14, 0(x15)
+        li x15, ram_current
 	## Initialize the data stack base
-	ldr r1, =stack_top
-	str r1, [r0, #stack_base_offset]
+	li x14, stack_top
+	sc x14, stack_base_offset(x15)
 	## Initialize the return stack base
-	ldr r1, =rstack_top
-	str r1, [r0, #rstack_base_offset]
+	li x14, rstack_top
+	sc x14, rstack_base_offset(x15)
 	## Initialize the data stack end
-	ldr r1, =stack_top - stack_size
-	str r1, [r0, #stack_end_offset]
+	li x14, stack_top - stack_size
+	sc x14, stack_end_offset(x15)
 	## Initialize the return stack end
-	ldr r1, =rstack_top - rstack_size
-	str r1, [r0, #rstack_end_offset]
+	li x14, rstack_top - rstack_size
+	sc x14, rstack_end_offset(x15)
 	## Initialize BASE
-	movs r1, #10
-	str r1, [r0, #base_offset]
+	li x14, 10
+	sc x14, base_offset(x15)
         ## Initalize key-hook
-        ldr r1, =_serial_key
-        str r1, [r0, #key_hook_offset]
+        li x14, _serial_key
+        sc x14, key_hook_offset(x15)
         ## Initialize key?-hook
-        ldr r1, =_serial_key_q
-        str r1, [r0, #key_q_hook_offset]
+        li x14, _serial_key_q
+        sc x14, key_q_hook_offset(x15)
         ## Initialize emit-hook
-        ldr r1, =_serial_emit
-        str r1, [r0, #emit_hook_offset]
+        li x14, _serial_emit
+        sc x14, emit_hook_offset(x15)
         ## Initialize emit?-hook
-        ldr r1, =_serial_emit_q
-        str r1, [r0, #emit_q_hook_offset]
-	ldr r2, =cpu_count * 4
-1:	cmp r2, #0
-	beq 2f
-	subs r2, #4
-        movs r1, #0
-        mvns r1, r1
-	ldr r0, =pause_enabled
-	str r1, [r0, r2]
-	b 1b
-2:	ldr r0, =error_hook
-        ldr r1, =_execute
-        str r1, [r0]
-        ldr r0, =prompt_hook
-	ldr r1, =_do_prompt
-	str r1, [r0]
-	ldr r0, =handle_number_hook
-	ldr r1, =_do_handle_number
-	str r1, [r0]
-	ldr r0, =failed_parse_hook
-	ldr r1, =_do_failed_parse
-	str r1, [r0]
-	ldr r0, =refill_hook
-	ldr r1, =_do_refill
-	str r1, [r0]
-	ldr r0, =pause_hook
-	ldr r1, =_do_nothing
-	str r1, [r0]
-        ldr r0, =reboot_hook
-        str r1, [r0]
-	ldr r0, =validate_dict_hook
-	str r1, [r0]
-        ldr r0, =word_begin_hook
-        str r1, [r0]
-        ldr r0, =word_exit_hook
-        str r1, [r0]
-        ldr r0, =word_end_hook
-        str r1, [r0]
-        ldr r0, =word_reset_hook
-        str r1, [r0]
-        ldr r0, =block_begin_hook
-        str r1, [r0]
-        ldr r0, =block_exit_hook
-        str r1, [r0]
-        ldr r0, =block_end_hook
-        str r1, [r0]
-	ldr r0, =finalize_hook
-	str r1, [r0]
-        ldr r0, =parse_hook
-        movs r1, #0
-        str r1, [r0]
-	ldr r0, =find_hook
-	ldr r1, =_find_raw
-	str r1, [r0]
-        ldr r0, =find_raw_hook
-        ldr r1, =_do_find
-        str r1, [r0]
-	ldr r0, =compiling_to_flash
-	movs r1, #0
-	str r1, [r0]
-	ldr r0, =current_compile
-	str r1, [r0]
-        ldr r0, =current_unit_start
-        str r1, [r0]
-	ldr r0, =deferred_literal
-	str r1, [r0]
-	ldr r0, =literal_deferred_q
-	str r1, [r0]
-	ldr r0, =latest
-	str r1, [r0]
-	ldr r0, =ram_latest
-	str r1, [r0]
-	ldr r0, =flash_latest
-	str r1, [r0]
-	ldr r0, =wordlist
-	str r1, [r0]
-	ldr r0, =build_target
-	str r1, [r0]
-	ldr r0, =current_flags
-	str r1, [r0]
-	ldr r0, =input_buffer_index
-	str r1, [r0]
-	ldr r0, =input_buffer_count
-	str r1, [r0]
-	ldr r0, =state
-	str r1, [r0]
-	ldr r0, =compress_flash_enabled
-	str r1, [r0]
-	ldr r0, =order
-	strh r1, [r0]
-	movs r1, #1
-	ldr r0, =order_count
-	str r1, [r0]
-        bl _prepare_prompt
-	pop {pc}
+        li x14, _serial_emit_q
+        sc x14, emit_q_hook_offset(x15)
+	li x13, cpu_count * cell
+1:	beqz x13, 2f
+        addi x13, x13, -cell
+        li x14, true_value
+	li x15, pause_enabled
+        add x15, x15, x13
+        sc x14, 0(x15)
+	j 1b
+2:	li x15, error_hook
+        li x14, _execute
+        sc x14, 0(x15)
+        li x15, prompt_hook
+	li x14, _do_prompt
+	sc x14, 0(x15)
+	li x15, handle_number_hook
+	li x14, _do_handle_number
+	sc x14, 0(x15)
+	li x15, failed_parse_hook
+	li x14, _do_failed_parse
+	sc x14, 0(x15)
+	li x15, refill_hook
+	li x14, _do_refill
+	sc x14, 0(x15)
+	li x15, pause_hook
+	li x14, _do_nothing
+	sc x14, 0(x15)
+        li x15, reboot_hook
+        sc x14, 0(x15)
+	li x15, validate_dict_hook
+	sc x14, 0(x15)
+        li x15, word_begin_hook
+        sc x14, 0(x15)
+        li x15, word_exit_hook
+        sc x14, 0(x15)
+        li x15, word_end_hook
+        sc x14, 0(x15)
+        li x15, word_reset_hook
+        sc x14, 0(x15)
+        li x15, block_begin_hook
+        sc x14, 0(x15)
+        li x15, block_exit_hook
+        sc x14, 0(x15)
+        li x15, block_end_hook
+        sc x14, 0(x15)
+	li x15, finalize_hook
+	sc x14, 0(x15)
+        li x15, parse_hook
+        li x14, 0
+        sc x14, 0(x15)
+	li x15, find_hook
+	li x14, _find_raw
+	sc x14, 0(x15)
+        li x15, find_raw_hook
+        li x14, _do_find
+        sc x14, 0(x15)
+	li x15, compiling_to_flash
+	li x14, 0
+	sc x14, 0(x15)
+	li x15, current_compile
+	sc x14, 0(x15)
+        li x15, current_unit_start
+        sc x14, 0(x15)
+	li x15, deferred_literal
+	sc x14, 0(x15)
+	li x15, literal_deferred_q
+	sc x14, 0(x15)
+	li x15, latest
+	sc x14, 0(x15)
+	li x15, ram_latest
+	sc x14, 0(x15)
+	li x15, flash_latest
+	sc x14, 0(x15)
+	li x15, wordlist
+	sc x14, 0(x15)
+	li x15, build_target
+	sc x14, 0(x15)
+	li x15, current_flags
+	sc x14, 0(x15)
+	li x15, input_buffer_index
+	sc x14, 0(x15)
+	li x15, input_buffer_count
+	sc x14, 0(x15)
+	li x15, state
+	sc x14, 0(x15)
+	li x15, compress_flash_enabled
+	sc x14, 0(x15)
+	li x15, order
+	sh x14, 0(x15)
+	li x14, 1
+	li x15, order_count
+	sc x14, 0(x15)
+        call _prepare_prompt
+        pop ra
+        ret
 	end_inlined
 	
 	## Initialize the in-RAM vector table
