@@ -1,76 +1,76 @@
-@ Copyright (c) 2019-2024 Travis Bemann
-@ Copyright (c) 2024 Paul Koning
-@
-@ Permission is hereby granted, free of charge, to any person obtaining a copy
-@ of this software and associated documentation files (the "Software"), to deal
-@ in the Software without restriction, including without limitation the rights
-@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-@ copies of the Software, and to permit persons to whom the Software is
-@ furnished to do so, subject to the following conditions:
-@ 
-@ The above copyright notice and this permission notice shall be included in
-@ all copies or substantial portions of the Software.
-@ 
-@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-@ SOFTWARE.
+# Copyright (c) 2019-2026 Travis Bemann
+# Copyright (c) 2024 Paul Koning
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 	
-	.include "../m33/macro.s"
+	.include "../common/macro.s"
 	.include "../rp2350/variables.s"
 	
 	.text
 
 	.include "../rp2350/vectors.s"
 
-	@@ The first (null) dictionary entry
+	## The first (null) dictionary entry
 	.p2align 2
 	.word invisible_flag
 	.word 0
 10:	.byte 0
 	.p2align 2
 	
-	@@ The entry point
+	## The entry point
  _handle_reset:
-	@@ Initialize r11, relied upon by swdcom
+	## Initialize r11, relied upon by swdcom
 	movs r0, #0
 	mov r11, r0
-	@@ Initialize the top of stack register
+	## Initialize the top of stack register
 	ldr tos, =0xFEDCBA98
-	@@ Get the dictionary base
+	## Get the dictionary base
 	ldr r0, =dict_base
 	ldr r1, =ram_current
 	str r1, [r0]
-	@@ Set a garbage dictionary base for the second core
+	## Set a garbage dictionary base for the second core
 	ldr r0, =dict_base + 4
 	ldr r1, =0xEFBEADDE
 	str r1, [r0]
-	@@ Initialize HERE
+	## Initialize HERE
 	ldr r0, =ram_current + ram_here_offset
 	ldr r1, =ram_current + user_offset
 	str r1, [r0]
-	@@ Initialize the data stack pointer
+	## Initialize the data stack pointer
 	ldr r1, =stack_top
 	movs dp, r1
-	@@ Initialize the return stack pointer
+	## Initialize the return stack pointer
 	ldr r1, =rstack_top
 	mov sp, r1
-	@@ Put a garbage value in HANDLER to force a crash if is used
+	## Put a garbage value in HANDLER to force a crash if is used
 	ldr r0, =ram_current + handler_offset
 	ldr r1, =0xF0E1C2D3
 	str r1, [r0]
-	@@ Call the rest of the runtime in an exception handler
+	## Call the rest of the runtime in an exception handler
 2:	push_tos
 	ldr tos, =outer_exc_handled
 	bl _try
-	@@ If the inner loop returns, reboot
+	## If the inner loop returns, reboot
 	b _handle_reset
 
-	@@ The outermost exception handling - if an exception happens here the
-	@@ system will reboot
+	## The outermost exception handling - if an exception happens here the
+	## system will reboot
 outer_exc_handled:
 	bl _init_platform_variables
 	bl _init_variables
@@ -106,16 +106,16 @@ _init_platform_variables:
         str r0, [r1]
 	bx lr
 
-	@ Prepare for rebooting
+	# Prepare for rebooting
 	define_internal_word "pre-reboot", visible_flag
 _pre_reboot:
-	ldr r0, =0xE000E180 @ NVIC_ICER_Base
-	ldr r1, =1 << 25 @ SIO_IRQ_FIFO
+	ldr r0, =0xE000E180 # NVIC_ICER_Base
+	ldr r1, =1 << 25 # SIO_IRQ_FIFO
 	ldr r2, [r0]
 	orrs r2, r1
 	str r2, [r0]
-	ldr r0, =0x40018004 @ PSM_FRCE_OFF
-	ldr r1, =1 << 24 @ PSM_FRCE_OFF_PROC1
+	ldr r0, =0x40018004 # PSM_FRCE_OFF
+	ldr r1, =1 << 24 # PSM_FRCE_OFF_PROC1
 	ldr r2, [r0]
 	orrs r2, r1
 	str r2, [r0]
@@ -137,8 +137,8 @@ _pre_reboot:
 	bx lr
 	end_inlined
 
-        @@ Reboot (note that this does not clear RAM, but it does clear the RAM
-	@@ dictionary
+        ## Reboot (note that this does not clear RAM, but it does clear the RAM
+	## dictionary
 	define_word "reboot", visible_flag
 _reboot:
         push {r4, lr}
@@ -162,7 +162,7 @@ _reboot:
 	pop {r4, pc}
 	end_inlined
 
-	@ Reboot the RP2350 in BOOTSEL mode
+	# Reboot the RP2350 in BOOTSEL mode
 	define_word "bootsel", visible_flag
 _bootsel:
         push {r4, lr}
@@ -178,7 +178,7 @@ _bootsel:
 	ldrh r3, [r2, #0x16]
 	blx r3
 	movs r4, r0
-        ldr r0, =0x2 @ | 0x0100
+        ldr r0, =0x2 # | 0x0100
 	movs r1, #0
         movs r2, #0
         movs r3, #0
@@ -198,7 +198,7 @@ _bootsel:
         pop {r4, pc}
 	end_inlined
 
-	@@ Execute a PAUSE word, if one is set
+	## Execute a PAUSE word, if one is set
 	define_word "pause", visible_flag
 _pause:	ldr r0, =SIO_BASE + 0x000
 	ldr r0, [r0]
@@ -213,7 +213,7 @@ _pause:	ldr r0, =SIO_BASE + 0x000
 1:	bx lr
 	end_inlined
 
-        @ Output a hexadecimal nibble
+        # Output a hexadecimal nibble
         define_word "h.1", visible_flag
 _h_1:   push {lr}
         movs r0, #0xF
@@ -227,7 +227,7 @@ _h_1:   push {lr}
         pop {pc}
         end_inlined
 
-        @ Output a hexadecimal 8-bit value, padded with zeroes
+        # Output a hexadecimal 8-bit value, padded with zeroes
         define_word "h.2", visible_flag
 _h_2:   push {lr}
         movs r0, #0xFF
@@ -239,7 +239,7 @@ _h_2:   push {lr}
         pop {pc}
         end_inlined
 
-        @ Output a hexadecimal 16-bit value, padded with zeroes
+        # Output a hexadecimal 16-bit value, padded with zeroes
         define_word "h.4", visible_flag
 _h_4:   push {lr}
         ldr r0, =0xFFFF
@@ -251,7 +251,7 @@ _h_4:   push {lr}
         pop {pc}
         end_inlined
 
-        @ Output a hexadecimal 32-bit value, padded with zeroes
+        # Output a hexadecimal 32-bit value, padded with zeroes
         define_word "h.8", visible_flag
 _h_8:   push {lr}
         push_tos
@@ -261,7 +261,7 @@ _h_8:   push {lr}
         pop {pc}
         end_inlined
 
-        @ output a hexadecimal 64-bit value, padded with zeroes
+        # output a hexadecimal 64-bit value, padded with zeroes
         define_word "h.16", visible_flag
 _h_16:  push {lr}
         bl _h_8
@@ -277,11 +277,11 @@ _h_16:  push {lr}
 	.include "../rp2350/console.s"
 	.include "../rp2350/expose.s"
         .include "../common/syntax.s"
-	.include "../m33/core.s"
-	.include "../m33/divide.s"
+	.include "../common/core.s"
+	.include "../common/divide.s"
 	.include "../common/outer.s"
 	.include "../common/cond.s"
-	.include "../m33/asm.s"
+	.include "../common/asm.s"
 	.include "../common/strings.s"
-	.include "../m33/double.s"
-	.include "../m33/exception.s"
+	.include "../common/double.s"
+	.include "../common/exception.s"
