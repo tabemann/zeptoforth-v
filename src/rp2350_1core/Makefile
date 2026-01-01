@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2025 Travis Bemann
+# Copyright (c) 2021-2026 Travis Bemann
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,14 +22,14 @@ export PLATFORM=rp2350_1core
 BASEDIR=../..
 ODIR=$(BASEDIR)/obj
 IDIR=$(BASEDIR)/bin/$(VERSION)/$(PLATFORM)
-OBJ=$(ODIR)/zeptoforth.$(PLATFORM).o
+OBJ=$(ODIR)/zeptoforth-v.$(PLATFORM).o
 BOOT_BIN=$(BASEDIR)/boot.rp2350.bin
-ELF=$(BASEDIR)/zeptoforth.$(PLATFORM).elf
-BIN=$(BASEDIR)/zeptoforth.$(PLATFORM).bin
-UF2=$(BASEDIR)/zeptoforth.$(PLATFORM).uf2
-IHEX=$(BASEDIR)/zeptoforth.$(PLATFORM).ihex
-LIST=$(BASEDIR)/zeptoforth.$(PLATFORM).list
-MAP=$(BASEDIR)/zeptoforth.$(PLATFORM).map
+ELF=$(BASEDIR)/zeptoforth-v.$(PLATFORM).elf
+BIN=$(BASEDIR)/zeptoforth-v.$(PLATFORM).bin
+UF2=$(BASEDIR)/zeptoforth-v.$(PLATFORM).uf2
+IHEX=$(BASEDIR)/zeptoforth-v.$(PLATFORM).ihex
+LIST=$(BASEDIR)/zeptoforth-v.$(PLATFORM).list
+MAP=$(BASEDIR)/zeptoforth-v.$(PLATFORM).map
 MINI_DICT_FILLER=$(BASEDIR)/src/rp2350/mini_dict_filler
 MAKE_UF2=../rp2350/make_uf2.sh
 
@@ -37,10 +37,10 @@ all: kernel_info $(UF2)
 
 install:
 	mkdir -p $(IDIR)
-	cp $(UF2) $(IDIR)/zeptoforth_kernel-$(VERSION).uf2
-	cp $(BIN) $(IDIR)/zeptoforth_kernel-$(VERSION).bin
-	cp $(IHEX) $(IDIR)/zeptoforth_kernel-$(VERSION).ihex
-	cp $(ELF) $(IDIR)/zeptoforth_kernel-$(VERSION).elf
+	cp $(UF2) $(IDIR)/zeptoforth-v_kernel-$(VERSION).uf2
+	cp $(BIN) $(IDIR)/zeptoforth-v_kernel-$(VERSION).bin
+	cp $(IHEX) $(IDIR)/zeptoforth-v_kernel-$(VERSION).ihex
+	cp $(ELF) $(IDIR)/zeptoforth-v_kernel-$(VERSION).elf
 
 kernel_info:
 	$(MAKE) -C ../common kernel_info
@@ -50,14 +50,14 @@ $(UF2): $(BIN)
 	$(MAKE_UF2) $(BOOT_BIN) $(BIN) $(MINI_DICT_FILLER) $(UF2)
 
 $(BIN): $(OBJ)
-	$(LD) $(OBJ) -T ../rp2350/zeptoforth.ld --cref -Map $(MAP) -o $(ELF)
+	$(LD) $(OBJ) -T ../rp2350/zeptoforth-v.ld --cref -Map $(MAP) -o $(ELF) -m elf32lriscv
 	$(DUMP) -D $(ELF) > $(LIST)
 	$(COPY) $(ELF) $@ -O binary
 	$(COPY) $(ELF) $(IHEX) -O ihex
 
 $(OBJ): *.s ../rp2350/*.s ../common/*.s ../m33/*.s
 	mkdir -p $(ODIR)
-	$(AS) $(ASFLAGS) -o $@ zeptoforth.s
+	$(AS) $(ASFLAGS) -o $@ zeptoforth-v.s -march=rv32im
 
 .PHONY: all install kernel_info clean
 

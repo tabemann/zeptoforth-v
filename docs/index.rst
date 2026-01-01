@@ -14,7 +14,6 @@ Zeptoforth Documentation
    words/console
    words/task
    words/double
-   words/float32
    words/alarm
    words/action
    words/pin
@@ -77,7 +76,6 @@ Zeptoforth Documentation
    words/asm
    words/expose
    extra/fixed32
-   extra/complex_float32
    extra/inter_fs_copy
    extra/profile
    extra/zeptoed

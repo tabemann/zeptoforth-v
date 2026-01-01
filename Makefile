@@ -21,57 +21,26 @@
 # Without this make can start in the wrong source directory
 .OBJDIR: ./
 
+export TOOLCHAIN?=riscv64-linux-gnu
 export IDIR=src/include
-export AS=arm-none-eabi-as
-export LD=arm-none-eabi-ld
-export COPY=arm-none-eabi-objcopy
-export DUMP=arm-none-eabi-objdump
+export AS=$(TOOLCHAIN)-as
+export LD=$(TOOLCHAIN)-ld
+export COPY=$(TOOLCHAIN)-objcopy
+export DUMP=$(TOOLCHAIN)-objdump
 export ASFLAGS=-g
 export PREFIX=/usr/local
-export PLATFORM=rp2040_big
-export VERSION=1.15.2-dev
+export PLATFORM=rp2350
+export VERSION=0.0.1-dev
 
 KERNEL_INFO=src/common/kernel_info.s
 
-all: stm32f407 stm32f411 stm32l476 stm32f746 rp2040 rp2040_big rp2040_1core rp2040_1core_big rp2350 rp2350_16mib rp2350_1core rp2350_1core_16mib
+all: rp2350 rp2350_16mib rp2350_1core rp2350_1core_16mib
 
 install:
-	$(MAKE) -C src/stm32f407 install
-	$(MAKE) -C src/stm32f411 install
-	$(MAKE) -C src/stm32l476 install
-	$(MAKE) -C src/stm32f746 install
-	$(MAKE) -C src/rp2040 install
-	$(MAKE) -C src/rp2040_big install
-	$(MAKE) -C src/rp2040_1core install
-	$(MAKE) -C src/rp2040_1core_big install
 	$(MAKE) -C src/rp2350 install
 	$(MAKE) -C src/rp2350_16mib install
 	$(MAKE) -C src/rp2350_1core install
 	$(MAKE) -C src/rp2350_1core_16mib install
-
-stm32f407:
-	$(MAKE) -C src/stm32f407
-
-stm32f411:
-	$(MAKE) -C src/stm32f411
-
-stm32l476:
-	$(MAKE) -C src/stm32l476
-
-stm32f746:
-	$(MAKE) -C src/stm32f746
-
-rp2040:
-	$(MAKE) -C src/rp2040
-
-rp2040_big:
-	$(MAKE) -C src/rp2040_big
-
-rp2040_1core:
-	$(MAKE) -C src/rp2040_1core
-
-rp2040_1core_big:
-	$(MAKE) -C src/rp2040_1core_big
 
 rp2350:
 	$(MAKE) -C src/rp2350
@@ -85,7 +54,7 @@ rp2350_1core:
 rp2350_1core_16mib:
 	$(MAKE) -C src/rp2350_1core_16mib
 
-.PHONY: all install stm32f407 stm32f411 stm32l746 stm32f746 rp2040 rp2040_big rp2040_1core rp2040_1core_big rp2350 rp2350_16mib rp2350_1core rp2350_1core_16mib clean html epub
+.PHONY: all install rp2350 rp2350_16mib rp2350_1core rp2350_1core_16mib clean html epub
 
 html:
 	cd docs ; sphinx-build -b html . ../html
@@ -94,14 +63,6 @@ epub:
 	cd docs ; sphinx-build -b epub . ../epub
 
 clean:
-	$(MAKE) -C src/stm32f407 clean
-	$(MAKE) -C src/stm32f411 clean
-	$(MAKE) -C src/stm32l476 clean
-	$(MAKE) -C src/stm32f746 clean
-	$(MAKE) -C src/rp2040 clean
-	$(MAKE) -C src/rp2040_big clean
-	$(MAKE) -C src/rp2040_1core clean
-	$(MAKE) -C src/rp2040_1core_big clean
 	$(MAKE) -C src/rp2350 clean
 	$(MAKE) -C src/rp2350_16mib clean
 	$(MAKE) -C src/rp2350_1core clean

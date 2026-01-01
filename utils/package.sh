@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Copyright (c) 2020 Travis Bemann
+# Copyright (c) 2020-2026 Travis Bemann
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -22,11 +22,11 @@
 
 VERSION=$1
 
-mkdir ../zeptoforth-$VERSION
-rsync -aP --exclude=".git" --exclude="bin" ./ ../zeptoforth-$VERSION/
-mkdir ../zeptoforth-$VERSION/bin
-cp -r bin/$VERSION ../zeptoforth-$VERSION/bin
-cd ../zeptoforth-$VERSION
+mkdir ../zeptoforth-v-$VERSION
+rsync -aP --exclude=".git" --exclude="bin" ./ ../zeptoforth-v-$VERSION/
+mkdir ../zeptoforth-v-$VERSION/bin
+cp -r bin/$VERSION ../zeptoforth-v-$VERSION/bin
+cd ../zeptoforth-v-$VERSION
 rm -rf `find . -name 'screenlog.*'`
 make clean
 rm -rf `find . -name '*~'`
@@ -38,4 +38,4 @@ rm -rf docs
 mv html docs
 rm -rf utils/zeptoforth_venv
 cd ..
-tar cfz zeptoforth-$VERSION.tar.gz zeptoforth-$VERSION
+tar cfz zeptoforth-v-$VERSION.tar.gz zeptoforth-v-$VERSION

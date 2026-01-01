@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-# Copyright (c) 2020-2025 Travis Bemann
+# Copyright (c) 2020-2026 Travis Bemann
 # Copyright (c) 2023 Chris Salch
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -26,7 +26,7 @@ VERSION=$1
 PLATFORM=$2
 PORT=$3
 IMAGE=$4
-PROJECT=zeptoforth
+PROJECT=zeptoforth-v
 
 # Get the directory of this script, we need this for the venv setup.
 # See: https://stackoverflow.com/a/20434740
@@ -45,22 +45,14 @@ EOD
   exit 1
 fi
 
-TARGET="bin/${VERSION}/${PLATFORM}/zeptoforth_${IMAGE}-${VERSION}"
+TARGET="bin/${VERSION}/${PLATFORM}/zeptoforth-v_${IMAGE}-${VERSION}"
 
 codeloader ${PORT} src/$PLATFORM/forth/setup_$IMAGE.fs
 
 screen_download_ihex ${PORT} ${TARGET} 
 screen_download_ihex_minidict ${PORT} ${TARGET}.minidict 
 
-if [ ${PLATFORM} = 'rp2040_big' ]; then
-    ${DIR}/../src/rp2040/make_uf2.sh --big ${TARGET}.bin ${TARGET}.minidict.bin ${TARGET}.uf2
-elif [ ${PLATFORM} = 'rp2040_1core_big' ]; then
-    ${DIR}/../src/rp2040/make_uf2.sh --big ${TARGET}.bin ${TARGET}.minidict.bin ${TARGET}.uf2
-elif [ ${PLATFORM} = 'rp2040' ]; then
-    ${DIR}/../src/rp2040/make_uf2.sh ${TARGET}.bin ${TARGET}.minidict.bin ${TARGET}.uf2
-elif [ ${PLATFORM} = 'rp2040_1core' ]; then
-    ${DIR}/../src/rp2040/make_uf2.sh ${TARGET}.bin ${TARGET}.minidict.bin ${TARGET}.uf2
-elif [ ${PLATFORM} = 'rp2350' ]; then
+if [ ${PLATFORM} = 'rp2350' ]; then
     ${DIR}/../src/rp2350/make_uf2.sh ${TARGET}.bin ${TARGET}.minidict.bin ${TARGET}.uf2
 elif [ ${PLATFORM} = 'rp2350_1core' ]; then
     ${DIR}/../src/rp2350/make_uf2.sh ${TARGET}.bin ${TARGET}.minidict.bin ${TARGET}.uf2

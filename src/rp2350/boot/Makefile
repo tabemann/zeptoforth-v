@@ -1,4 +1,4 @@
-# Copyright (c) 2021-2024 Travis Bemann
+# Copyright (c) 2021-2026 Travis Bemann
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -32,13 +32,13 @@ BOOT_WITH_CHECKSUM=./boot_with_checksum.py
 all: $(BIN)
 
 $(BIN): $(OBJ)
-	$(LD) $(OBJ) -T boot.ld --cref -Map $(MAP) -o $(ELF)
+	$(LD) $(OBJ) -T boot.ld --cref -Map $(MAP) -o $(ELF) -m elf32lriscv
 	$(DUMP) -D $(ELF) > $(LIST)
 	$(COPY) $(ELF) $@ -O binary
 	$(COPY) $(ELF) $(IHEX) -O ihex
 
 $(OBJ): boot.s
-	$(AS) $(ASFLAGS) -o $@ boot.s
+	$(AS) $(ASFLAGS) -o $@ boot.s -march=rv32im
 
 .PHONY: clean
 

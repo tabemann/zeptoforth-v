@@ -1,7 +1,7 @@
 #!/bin/sh
 set -e
 
-# Copyright (c) 2024-2025 Travis Bemann
+# Copyright (c) 2024-2026 Travis Bemann
 #
 # Permission is hereby granted, free of charge, to any person obtaining a copy
 # of this software and associated documentation files (the "Software"), to deal
@@ -42,7 +42,7 @@ Usage:
 EOF
 fi
 
-RP2350_KERNEL="bin/${VERSION}/rp2350_16mib/zeptoforth_kernel-${VERSION}.uf2"
+RP2350_KERNEL="bin/${VERSION}/rp2350_16mib/zeptoforth-v_kernel-${VERSION}.uf2"
 
 flash_rp ${RP2350_KERNEL} ${BLOCK_DEVICE} ${FILESYSTEM}
 ${DIR}/make_uf2_image.sh ${VERSION} rp2350_16mib ${PORT} full
