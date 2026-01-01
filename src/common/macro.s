@@ -139,7 +139,7 @@ dp 	.req x9
 	.word 10b - 8
 10:	.byte 12f - 11f
 11:	.ascii "\name"
-12:	.p2align 1
+12:	.p2align 2
 	.endm
 
 	## Internal word header macro
@@ -151,7 +151,7 @@ dp 	.req x9
 	.word 10b - 8
 10:	.byte 12f - 11f
 11:	.ascii "\name"
-12:	.p2align 1
+12:	.p2align 2
 	.endm
 
 	## Push the top of the stack onto the data stack

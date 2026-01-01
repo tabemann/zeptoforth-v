@@ -1595,18 +1595,18 @@ _comma_double:
 	define_word "cflash,", visible_flag
 _flash_comma_1:
         addi sp, sp, -3*cell
-        ssp ra, 0(sp)
+        scsp ra, 0(sp)
         li x15, flash_here
         push_tos
         lc tos, 0(x15)
-        ssp x15, 1*cell(sp)
-        ssp tos, 2*cell(sp)
+        scsp x15, 1*cell(sp)
+        scsp tos, 2*cell(sp)
         call _store_flash_1
-        lsp x15, 1*cell(sp)
-        lsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
+        lcsp x14, 2*cell(sp)
         addi x14, x14, 1
         sc x14, 0(x15)
-        lsp ra, 0(sp)
+        lcsp ra, 0(sp)
         addi sp, sp, 3*cell
         ret
 	end_inlined
@@ -1615,18 +1615,18 @@ _flash_comma_1:
 	define_word "hflash,", visible_flag
 _flash_comma_2:
         addi sp, sp, -3*cell
-        ssp ra, 0(sp)
+        scsp ra, 0(sp)
         li x15, flash_here
         push_tos
         lc tos, 0(x15)
-        ssp x15, 1*cell(sp)
-        ssp tos, 2*cell(sp)
+        scsp x15, 1*cell(sp)
+        scsp tos, 2*cell(sp)
         call _store_flash_2
-        lsp x15, 1*cell(sp)
-        lsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
+        lcsp x14, 2*cell(sp)
         addi x14, x14, 2
         sc x14, 0(x15)
-        lsp ra, 0(sp)
+        lcsp ra, 0(sp)
         addi sp, sp, 3*cell
         ret
 	end_inlined
@@ -1635,18 +1635,18 @@ _flash_comma_2:
 	define_word "wflash,", visible_flag
 _flash_comma_4:
         addi sp, sp, -3*cell
-        ssp ra, 0(sp)
+        scsp ra, 0(sp)
         li x15, flash_here
         push_tos
         lc tos, 0(x15)
-        ssp x15, 1*cell(sp)
-        ssp tos, 2*cell(sp)
+        scsp x15, 1*cell(sp)
+        scsp tos, 2*cell(sp)
         call _store_flash_4
-        lsp x15, 1*cell(sp)
-        lsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
+        lcsp x14, 2*cell(sp)
         addi x14, x14, 4
         sc x14, 0(x15)
-        lsp ra, 0(sp)
+        lcsp ra, 0(sp)
         addi sp, sp, 3*cell
         ret
 	end_inlined
@@ -1655,18 +1655,18 @@ _flash_comma_4:
 	define_word "flash,", visible_flag
 _flash_comma_cell:
         addi sp, sp, -3*cell
-        ssp ra, 0(sp)
+        scsp ra, 0(sp)
         li x15, flash_here
         push_tos
         lc tos, 0(x15)
-        ssp x15, 1*cell(sp)
-        ssp tos, 2*cell(sp)
+        scsp x15, 1*cell(sp)
+        scsp tos, 2*cell(sp)
         call _store_flash_cell
-        lsp x15, 1*cell(sp)
-        lsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
+        lcsp x14, 2*cell(sp)
         addi x14, x14, cell
         sc x14, 0(x15)
-        lsp ra, 0(sp)
+        lcsp ra, 0(sp)
         addi sp, sp, 3*cell
         ret
 	end_inlined
@@ -1675,18 +1675,18 @@ _flash_comma_cell:
 	define_word "2flash,", visible_flag
 _flash_comma_double:
         addi sp, sp, -3*cell
-        ssp ra, 0(sp)
+        scsp ra, 0(sp)
         li x15, flash_here
         push_tos
         lc tos, 0(x15)
-        ssp x15, 1*cell(sp)
-        ssp tos, 2*cell(sp)
+        scsp x15, 1*cell(sp)
+        scsp tos, 2*cell(sp)
         call _store_flash_double
-        lsp x15, 1*cell(sp)
-        lsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
+        lcsp x14, 2*cell(sp)
         addi x14, x14, 2*cell
         sc x14, 0(x15)
-        lsp ra, 0(sp)
+        lcsp ra, 0(sp)
         addi sp, sp, 3*cell
         ret
 	end_inlined
@@ -2060,22 +2060,22 @@ _current_reserve_double:
 	define_word "align,", visible_flag
 _current_comma_align:
         addi sp, sp, -2*cell
-        ssp ra, 0(sp)
+        scsp ra, 0(sp)
         addi tos, tos, -1
         mv x15, tos
         pull_tos
-1:      ssp x15, cell(sp)
+1:      scsp x15, cell(sp)
         call _current_here
-        lsp x15, cell(sp)
+        lcsp x15, cell(sp)
         and tos, tos, x15
         beqz tos, 2f
         li tos, 0
-        ssp x15, cell(sp)
+        scsp x15, cell(sp)
         call _current_comma_1
-        lsp x15, cell(sp)
+        lcsp x15, cell(sp)
         j 1b
 2:      pull_tos
-        lsp ra, 0(sp)
+        lcsp ra, 0(sp)
         addi sp, sp, 2*cell
         ret
         end_inlined
@@ -2084,22 +2084,22 @@ _current_comma_align:
 	define_word "flash-align,", visible_flag
 _flash_comma_align:
         addi sp, sp, -2*cell
-        ssp ra, 0(sp)
+        scsp ra, 0(sp)
         addi tos, tos, -1
         mv x15, tos
         pull_tos
-1:      ssp x15, cell(sp)
+1:      scsp x15, cell(sp)
         call _flash_here
-        lsp x15, cell(sp)
+        lcsp x15, cell(sp)
         and tos, tos, x15
         beqz tos, 2f
         li tos, 0
-        ssp x15, cell(sp)
+        scsp x15, cell(sp)
         call _flash_comma_1
-        lsp x15, cell(sp)
+        lcsp x15, cell(sp)
         j 1b
 2:      pull_tos
-        lsp ra, 0(sp)
+        lcsp ra, 0(sp)
         addi sp, sp, 2*cell
         ret
 	end_inlined
@@ -2108,22 +2108,22 @@ _flash_comma_align:
 	define_word "ram-align,", visible_flag
 _comma_align:
         addi sp, sp, -2*cell
-        ssp ra, 0(sp)
+        scsp ra, 0(sp)
         addi tos, tos, -1
         mv x15, tos
         pull_tos
-1:      ssp x15, cell(sp)
+1:      scsp x15, cell(sp)
         call _here
-        lsp x15, cell(sp)
+        lcsp x15, cell(sp)
         and tos, tos, x15
         beqz tos, 2f
         li tos, 0
-        ssp x15, cell(sp)
+        scsp x15, cell(sp)
         call _comma_1
-        lsp x15, cell(sp)
+        lcsp x15, cell(sp)
         j 1b
 2:      pull_tos
-        lsp ra, 0(sp)
+        lcsp ra, 0(sp)
         addi sp, sp, 2*cell
         ret
 	end_inlined
@@ -2132,7 +2132,7 @@ _comma_align:
 	define_word "cstring,", visible_flag
 _current_comma_cstring:
         addi sp, sp, -3*cell
-        ssp ra, 0(sp)
+        scsp ra, 0(sp)
         li x15, 255
         bltu tos, x15, 1f
         mv tos, x15
@@ -2145,15 +2145,15 @@ _current_comma_cstring:
 2:      beqz x15, 1f
         push_tos
         lbu tos, 0(x14)
-        ssp x15, 1*cell(sp)
-        ssp x14, 2*cell(sp)
+        scsp x15, 1*cell(sp)
+        scsp x14, 2*cell(sp)
         call _current_comma_1
-        lsp x14, 2*cell(sp)
-        lsp x15, 1*cell(sp)
+        lcsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
         addi x15, x15, -1
         addi x14, x14, 1
         j 2b
-1:      lsp ra, 0(sp)
+1:      lcsp ra, 0(sp)
         addi sp, sp, 3*cell
         ret
         end_inlined
@@ -2176,7 +2176,7 @@ _pop_r:	push_tos
 	## Get a value off the return stack without popping it
 	define_word "r@", visible_flag | inlined_flag
 _get_r:	push_tos
-	ssp tos, 0(sp)
+	scsp tos, 0(sp)
 	ret
 	end_inlined
 
@@ -2193,8 +2193,8 @@ _push_2r:
         lc x14, cell(dp)
         addi dp, dp, 2*cell
         addi sp, sp, -2*cell
-        ssp tos, cell(sp)
-        ssp x15, 0(sp)
+        scsp tos, cell(sp)
+        scsp x15, 0(sp)
         mv tos, x14
         ret
 	end_inlined
@@ -2204,8 +2204,8 @@ _push_2r:
 _pop_2r:
         addi dp, dp, -2*cell
         sc tos, cell(dp)
-        lsp tos, cell(sp)
-        lsp x15, 0(sp)
+        lcsp tos, cell(sp)
+        lcsp x15, 0(sp)
         addi sp, sp, 2*cell
         sc x15, 0(dp)
         ret
@@ -2216,8 +2216,8 @@ _pop_2r:
 _get_2r:
         addi dp, dp, -2*cell
         sc tos, cell(dp)
-        lsp tos, cell(sp)
-        lsp x15, 0(sp)
+        lcsp tos, cell(sp)
+        lcsp x15, 0(sp)
         sc x15, 0(dp)
         ret
 	end_inlined
