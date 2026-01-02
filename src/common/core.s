@@ -785,8 +785,6 @@ _find_last_visible_word:
 2:      ret
         end_inlined
 
-	.ltorg
-	
 	## An empty init routine, to call if no other init routines are
 	## available, so as to enable any source file to call a preceding init
 	## routine without having to check if one exists
@@ -870,8 +868,6 @@ _immediate:
         ret
 	end_inlined
 
-	.ltorg
-	
 	## Set the currently-defined word to be compile-only
 	define_word "compile-only", visible_flag
 _compile_only:
@@ -1335,8 +1331,6 @@ _bit_clear_2:
         ret
 	end_inlined
 
-	.ltorg
-	
 	## Bit clear a word
 	define_word "wbic!", visible_flag | inlined_flag
 _bit_clear_4:
@@ -1492,8 +1486,6 @@ _get_double:
         ret
 	end_inlined
 
-.ltorg
-        
 	## Store a byte at the RAM HERE location
 	define_word "cram,", visible_flag
 _comma_1:
@@ -2509,6 +2501,4 @@ _init_vector_table:
 	dsb
 	isb
 	bx lr
-
-	.ltorg
 	

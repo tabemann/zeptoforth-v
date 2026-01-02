@@ -116,8 +116,6 @@ _token: addi sp, sp, -2*cell
         ret
         end_inlined
 
-	.ltorg
-	
 	## Parse a line comment
 	define_word "\\", visible_flag | immediate_flag
 _line_comment:
@@ -271,8 +269,6 @@ _find_dict:
         ret
         end_inlined
 
-	.ltorg
-	
 	## Duplicate three items on the stack
 	define_word "3dup", visible_flag
 _3dup:	push_tos
@@ -440,8 +436,6 @@ _find_all_dict:
         ret
 	end_inlined
 
-	.ltorg
-	
 	## Find a word in the dictionary in any wordlist in order of definition
 	## ( addr bytes -- addr|0 )
 	define_word "find-all", visible_flag
@@ -621,8 +615,6 @@ _quit_error:
         ret
 	end_inlined
 
-	.ltorg
-	
 	## Display red text
 	define_word "display-red", visible_flag
 _display_red:
@@ -649,8 +641,6 @@ _display_normal:
         ret
         end_inlined
 
-	.ltorg
-	
 	## The main functionality, within the main exception handler
 	define_internal_word "main", visible_flag
 _main:  push ra
@@ -779,724 +769,705 @@ _interpret_line:
 	## Validate the current state
 	define_internal_word "validate", visible_flag
 _validate:
-	push {lr}
-	bl _stack_base
-	ldr r0, [tos]
-	pull_tos
-	cmp dp, r0
-	ble 1f
-	push_tos
-	ldr tos, =_stack_underflow
-	bl _raise
-1:	bl _stack_end
-	ldr r0, [tos]
-	pull_tos
-	cmp dp, r0
-	bge 1f
-	push_tos
-	ldr tos, =_stack_overflow
-	bl _raise
-1:	mov r1, sp
-	push {r1}
-	bl _rstack_base
-	pop {r1}
-	ldr r0, [tos]
-	pull_tos
-	cmp r1, r0
-	ble 1f
-	push_tos
-	ldr tos, =_rstack_underflow
-	bl _raise
-1:	push {r1}
-	bl _rstack_end
-	pop {r1}
-	ldr r0, [tos]
-	pull_tos
-	cmp r1, r0
-	bge 1f
-	push_tos
-	ldr tos, =_rstack_overflow
-	bl _raise
-1:	ldr r0, =validate_dict_hook
-	push_tos
-	ldr tos, [r0]
-	bl _execute_nz
-	pop {pc}
+        push ra
+        call _stack_base
+        lc x15, 0(tos)
+        pull_tos
+        bleu dp, x15, 1f
+        push_tos
+        li tos, _stack_underflow
+        call _raise
+1:      call _stack_end
+        lc x15, 0(tos)
+        pull_tos
+        bgeu dp, x15, 1f
+        push_tos
+        li tos, _stack_overflow
+        call _raise
+1:      mv x14, sp
+        push x14
+        call _rstack_base
+        pop x14
+        lc x15, 0(tos)
+        pull_tos
+        ble x14, x15, 1f
+        push_tos
+        li tos, _rstack_underflow
+        call _raise
+1:      push x14
+        call _rstack_end
+        pop x14
+        lc x15, 0(tos)
+        pull_tos
+        bge x14, x15, 1f
+        push_tos
+        li tos, _rstack_overflow
+        call _raise
+1:      li x15, validate_dict_hook
+        lc x15, 0(x15)
+        beqz x15, 1f
+        jalr ra, x15
+1:      pop ra
+        ret
 	end_inlined
 
-	.ltorg
-	
 	## Stack overflow exception
 	define_word "stack-overflow", visible_flag
 _stack_overflow:
-	push {lr}
+        push ra
 	string_ln "stack overflow"
-	bl _type
-	pop {pc}
+	call _type
+	pop ra
+        ret
 	end_inlined
 
 	## Stack underflow exception
 	define_word "stack-underflow", visible_flag
 _stack_underflow:
-	push {lr}
+        push ra
 	string_ln "stack underflow"
-	bl _type
-	pop {pc}
+	call _type
+        pop ra
+        ret
 	end_inlined
 
 	## Return stack overflow exception
 	define_word "rstack-overflow", visible_flag
 _rstack_overflow:
-	push {lr}
+	push ra
 	string_ln "return stack overflow"
-	bl _type
-	pop {pc}
+	call _type
+	pop ra
+        ret
 	end_inlined
 
 	## Return stack underflow exception
 	define_word "rstack-underflow", visible_flag
 _rstack_underflow:
-	push {lr}
+	push ra
 	string_ln "return stack underflow"
-	bl _type
-	pop {pc}
+	call _type
+	pop ra
+        ret
 	end_inlined
 
 	## Display a prompt
 	define_internal_word "do-prompt", visible_flag
 _do_prompt:
-	push {lr}
+	push ra
 	string_ln " ok"
-	bl _type
-	pop {pc}
+        call _type
+	pop ra
+        ret
 	end_inlined
 
 	## Parse a literal word
 	define_internal_word "parse-literal", visible_flag
 _parse_literal:
-	push {lr}
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	pull_tos
-	ldr r2, =handle_number_hook
-	ldr r2, [r2]
-	cmp r2, #0
-	beq 1f
-	push {r0, r1}
-	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, r0
-	push_tos
-	movs tos, r2
-	bl _execute
-	pop {r0, r1}
-	cmp tos, #0
-	beq 1f
-	pull_tos
-	pop {pc}
-1:	ldr r2, =failed_parse_hook
-	ldr r2, [r2]
-	cmp r2, #0
-	beq 2f
-	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, r0
-	push_tos
-	movs tos, r2
-	bl _execute
-2:	pop {r0}
-	b _abort
+        addi sp, sp, -3*cell
+        scsp ra, 0(sp)
+        mv x15, tos
+        lc x14, cell(dp)
+        lc tos, 0(dp)
+        addi dp, dp, 2*cell
+        li x13, handle_number_hook
+        lc x13, 0(x13)
+        beqz x13, 1f
+        scsp x15, 1*cell(sp)
+        scsp x14, 2*cell(sp)
+        addi dp, dp -2*cell
+        sc tos, cell(dp)
+        sc x14, 0(dp)
+        mv tos, x15
+        jalr ra, x13
+        lcsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
+        beqz tos, 1f
+        pull_tos
+        j 2f
+1:      li x13, failed_parse_hook
+        lc x13, 0(x13)
+        beqz x13, 2f
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        sc x14, 0(dp)
+        mv tos, x15
+        jalr ra, x13
+2:      lcsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
+        end_inlined
 
 	## Refill the input buffer
 	define_word "refill", visible_flag
 _refill:
-	push {lr}
-	ldr r0, =eval_refill
-        push_tos
-	ldr tos, [r0]
-	bl _execute_nz
-	pop {pc}
+        li x15, eval_refill
+        lc x15, 0(x15)
+        beqz x15, 1f
+        jr x15
+1:      ret
 	end_inlined
 
-	.ltorg
-	
 	## Send XON
 	define_word "xon", visible_flag
-_xon:	push {lr}
-	ldr r0, =xon_xoff_enabled
-	ldr r0, [r0]
-	cmp r0, #0
-	beq 1f
-	push_tos
-	movs tos, #0x11
-	bl _emit
-1:	pop {pc}
+_xon:   li x15, xon_xoff_enabled
+        lc x15, 0(x15)
+        beqz x15, 1f
+        push_tos
+        li tos, 0x11
+        j _emit
+1:      ret
 	end_inlined
 
 	## Send XOFF
 	define_word "xoff", visible_flag
-_xoff:	push {lr}
-	ldr r0, =xon_xoff_enabled
-	ldr r0, [r0]
-	cmp r0, #0
-	beq 1f
-	push_tos
-	movs tos, #0x13
-	bl _emit
-1:	pop {pc}
+_xoff:	li x15, xon_xoff_enabled
+        lc x15, 0(x15)
+        beqz x15, 1f
+        push_tos
+        li tos, 0x13
+        j _emit
+1:      ret
 	end_inlined
 
 	## Send ACK
 	define_word "ack", visible_flag
-_ack:	push {lr}
-	ldr r0, =ack_nak_enabled
-	ldr r0, [r0]
-	cmp r0, #0
-	beq 1f
-	push_tos
-	movs tos, #0x06
-	bl _emit
-1:	pop {pc}
+_ack:	li x15, ack_nak_enabled
+        lc x15, 0(x15)
+        beqz x15, 1f
+        push_tos
+        li tos, 0x06
+        j _emit
+1:      ret
 	end_inlined
 
 	## Send NAK
 	define_word "nak", visible_flag
-_nak:	push {lr}
-	ldr r0, =ack_nak_enabled
-	ldr r0, [r0]
-	cmp r0, #0
-	beq 1f
-	push_tos
-	movs tos, #0x15
-	bl _emit
-1:	pop {pc}
+_nak:	li x15, ack_nak_enabled
+        lc x15, 0(x15)
+        beqz x15, 1f
+        push_tos
+        li tos, 0x15
+        j _emit
+1:      ret
 	end_inlined
 
 	## Send BEL
 	define_word "bel", visible_flag
-_bel:	push {lr}
-	ldr r0, =bel_enabled
-	ldr r0, [r0]
-	cmp r0, #0
-	beq 1f
-	push_tos
-	movs tos, #0x07
-	bl _emit
-1:	pop {pc}
+_bel:	li x15, bel_enabled
+        lc x15, 0(x15)
+        beqz x15, 1f
+        push_tos
+        li tos, 0x07
+        j _emit
+1:      ret
 	end_inlined
 
 	## Implement the refill hook
 	define_internal_word "do-refill", visible_flag
 _do_refill:
-	push {lr}
-	bl _xon
-	bl _ack
-	movs r0, #0
-	ldr r1, =input_buffer_size
-	ldr r2, =input_buffer
-	adds r0, r2
-	adds r1, r2
-1:	cmp r0, r1
-	beq 2f
-6:	push {r0, r1}
-	bl _key
-	pop {r0, r1}
-	cmp tos, #0x0D
-	beq 3f
-	cmp tos, #0x0A
-	beq 3f
-	cmp tos, #0x7F
-	beq 4f
-	cmp tos, #0x09
-	beq 8f
-	cmp tos, #0x20
-	blo 7f
-8:	strb tos, [r0]
-	adds r0, #1
-	movs r2, tos
-	push {r0, r1, r2}
-	bl _emit
-	pop {r0, r1, r2}
-	b 1b
-7:	pull_tos
-	b 6b
-4:	ldr r2, =input_buffer
-	cmp r0, r2
-	beq 7b
-	push {r0, r1}
-	movs tos, #0x08
-	bl _emit
-	push_tos
-	movs tos, #0x20
-	bl _emit
-	push_tos
-	movs tos, #0x08
-	bl _emit
-	pop {r0, r1}
-4:	ldr r2, =input_buffer
-	cmp r0, r2
-	beq 1b
-	subs r0, #1
-	ldrb r2, [r0]
-	movs r3, #0x80
-	tst r2, r3
-	beq 1b
-	movs r3, r0
-	subs r3, #1
-	ldr r2, =input_buffer
-	cmp r3, r2
-	beq 1b
-	ldrb r2, [r3]
-	movs r3, #0x80
-	tst r2, r3
-	bne 4b
-	b 1b
-3:	pull_tos
-2:	ldr r2, =input_buffer
-	subs r0, r2
-	ldr r2, =input_buffer_count
-	str r0, [r2]
-	movs r0, #0
-	ldr r2, =input_buffer_index
-	str r0, [r2]
-	bl _xoff
-	pop {pc}
-	end_inlined
+        addi sp, sp, -4*cell
+        scsp ra, 0(sp)
+        call _xon
+        call _ack
+        li x14, input_buffer_size
+        li x13, input_buffer
+        mv x15, x13
+        add x14, x14, x13
+1:      beq x15, x14, 2f
+6:      scsp x15, 1*cell(sp)
+        scsp x14, 2*cell(sp)
+        call _key
+        lcsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
+        li x12, 0x0D
+        beq tos, x12, 3f
+        li x12, 0x0A
+        beq tos, x12, 3f
+        li x12, 0x7F
+        beq tos, x12, 4f
+        li x12, 0x09
+        beq tos, x12, 8f
+        li x12, 0x20
+        bltu tos, x12, 7f
+8:      sb tos, 0(x15)
+        addi x15, x15, 1
+        mv x13, tos
+        scsp x15, 1*cell(sp)
+        scsp x14, 2*cell(sp)
+        scsp x13, 3*cell(sp)
+        call _emit
+        lcsp x13, 3*cell(sp)
+        lcsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
+        j 1b
+7:      pull_tos
+        b 6b
+4:      li x13, input_buffer
+        beq x15, x13, 7b
+        scsp x15, 1*cell(sp)
+        scsp x14, 2*cell(sp)
+        li tos, 0x08
+        call _emit
+        push_tos
+        li tos, 0x20
+        call _emit
+        push_tos
+        li tos, 0x08
+        call _emit
+        lcsp x15, 1*cell(sp)
+        lcsp x14, 2*cell(sp)
+4:      li x13, input_buffer
+        beq x15, x13, 1b
+        addi x15, x15, -1
+        lbu x13, 0(x15)
+        andi x12, x13, 0x80
+        beqz x12, 1b
+        mv x12, x15
+        addi x12, x12, -1
+        li x13, input_buffer
+        beq x12, x13, 1b
+        lbu x13, 0(x12)
+        andi x12, x13, 0x80
+        bnez x12, 4b
+        j 1b
+3:      pull_tos
+2:      li x13, input_buffer
+        sub x15, x15, x13
+        li x13, input_buffer_count
+        sc x15, 0(x13)
+        li x15, 0
+        li x13, input_buffer_index
+        sc x15, 0(x13)
+        call _xoff
+        lcsp ra, 0(sp)
+        addi sp, sp, 4*cell
+        ret
+        end_inlined
 	
 	## Implement the failed parse hook
 	define_internal_word "do-failed-parse", visible_flag
 _do_failed_parse:
-	push {lr}
         push_tos
-        ldr tos, =_really_do_failed_parse
-        bl _with_error_console
-        pop {pc}
+        li tos, _really_do_failed_parse
+        j _with_error_console
 _really_do_failed_parse:
-	push {lr}
-	bl _display_red
+        push ra
+	call _display_red
 	string "unable to parse: "
-	bl _type
-	bl _type
+	call _type
+	call _type
 	string_ln ""
-	bl _type
-	bl _display_normal
+	call _type
+	call _display_normal
 	push_tos
-	ldr tos, =_failed_parse
-	bl _raise
-	pop {pc}
+	li tos, _failed_parse
+	call _raise
+        pop ra
+        ret
 	end_inlined
 
 	## Failed parse exception
 	define_word "x-failed-parse", visible_flag
 _failed_parse:
-	push {lr}
-	pop {pc}
+        ret
 	end_inlined
 	
 	## Implement the handle number hook
 	define_internal_word "do-handle-number", visible_flag
 _do_handle_number:
-	push {lr}
-	bl _parse_integer
-	cmp tos, #0
-	beq 2f
-	pull_tos
-	ldr r0, =state
-	ldr r0, [r0]
-	cmp r0, #0
-	beq 1f
-	bl _comma_lit
-1:	push_tos
-	ldr tos, =-1
-	pop {pc}
-2:	pull_tos
-	movs tos, #0
-	pop {pc}
-	end_inlined
+        push ra
+        call _parse_integer
+        beqz tos, 2f
+        pull_tos
+        li x15, state
+        lc x15, 0(x15)
+        beqz x15, 1f
+        call _comma_lit
+1:      push_tos
+        li tos, true_value
+        j 3f
+2:      pull_tos
+        li tos, false_value
+3:      pop ra
+        ret
+        end_inlined
 
 	## Parse an integer ( addr bytes -- n success )
 	define_word "parse-integer", visible_flag
 _parse_integer:
-	push {lr}
-	bl _parse_base
-	bl _parse_integer_core
-	pop {pc}
+	push ra
+	call _parse_base
+	call _parse_integer_core
+	pop ra
+        ret
 	end_inlined
 
 	## Parse an unsigned integer ( addr bytes -- u success )
 	define_word "parse-unsigned", visible_flag
 _parse_unsigned:
-	push {lr}
-	bl _parse_base
-	ldr r0, [dp]
-	cmp r0, #0
-	beq 1f
-	bl _parse_unsigned_core
-	pop {pc}
+	push ra
+	call _parse_base
+        lc x15, 0(dp)
+        beqz x15, 1f
+	call _parse_unsigned_core
+        j 2f
 1:	pull_tos
-	movs tos, #0
-	str tos, [dp]
-	pop {pc}
+	li tos, 0
+	sc tos, 0(dp)
+2:      pop ra
+        ret
 	end_inlined
-
-	.ltorg
 
 	## Actually parse an integer base ( addr bytes -- addr bytes base )
 	define_word "parse-base", visible_flag
 _parse_base:
-	push {lr}
-	cmp tos, #0
-	beq 5f
-	movs r0, tos
-	pull_tos
-	ldrb r1, [tos]
-	cmp r1, #0x24
-	bne 1f
-	movs r1, #16
-	b 6f
-1:	cmp r1, #0x23
-	bne 2f
-	movs r1, #10
-	b 6f
-2:	cmp r1, #0x2F
-	bne 3f
-	movs r1, #8
-	b 6f
-3:	cmp r1, #0x25
-	bne 4f
-	movs r1, #2
-	b 6f
-4:	push_tos
-	movs tos, r0
-5:	bl _base
-	ldr tos, [tos]
-	pop {pc}
-6:	adds tos, #1
-	push_tos
-	subs r0, #1
-	movs tos, r0
-	push_tos
-	movs tos, r1
-	pop {pc}
-	end_inlined
+        push ra
+        beqz tos, 5f
+        mv x15, tos
+        pull_tos
+        lbu x14, 0(tos)
+        li x13, 0x24
+        bne x14, x13, 1f
+        li x14, 16
+        j 6f
+1:      li x13, 0x23
+        bne x14, x13, 2f
+        li x14, 10
+        j 6f
+2:      li x13, 0x2F
+        bne x14, x13, 3f
+        li x14, 8
+        j 6f
+3:      li x13, 0x25
+        bne x14, x13, 4f
+        li x14, 2
+        j 6f
+4:      push_tos
+        mv tos, x15
+5:      call _base
+        lc tos, 0(tos)
+        j 7f
+6:      addi tos, tos, 1
+        push_tos
+        addi x15, x15, -1
+        addi dp, dp, -cell
+        sc x15, 0(dp)
+        mv tos, x14
+7:      pop ra
+        ret
+        end_inlined
 
 	## Actually parse an integer ( addr bytes base -- n success )
 	define_internal_word "parse-integer-core", visible_flag
 _parse_integer_core:
-	push {lr}
-	movs r2, tos
-	pull_tos
-	cmp tos, #0
-	beq 3f
-	movs r0, tos
-	pull_tos
-	ldrb r1, [tos]
-	cmp r1, #0x2D
-	beq 1f
-	push_tos
-	movs tos, r0
-	push_tos
-	movs tos, r2
-	bl _parse_unsigned_core
-	pop {pc}
-1:	adds tos, #1
-	push_tos
-	movs tos, r0
-	subs tos, #1
-	push_tos
-	movs tos, r2
-	bl _parse_unsigned_core
-	cmp tos, #0
-	beq 2f
-	pull_tos
-	rsbs tos, tos, #0
-	push_tos
-	ldr tos, =-1
-	pop {pc}
-3:	pull_tos
-	movs tos, #0
-	push_tos
-	movs tos, #0
-	pop {pc}
-	end_inlined
+        push ra
+        mv x13, tos
+        pull_tos
+        beqz tos, 3f
+        mv x15, tos
+        pull_tos
+        lbu x14, 0(tos)
+        li x12, 0x2D
+        beq x14, x12, 1f
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        mv tos, x13
+        call _parse_unsigned_core
+        j 4f
+1:      addi dp, dp, -2*cell
+        addi tos, tos, 1
+        sc tos, cell(dp)
+        addi x15, x15, -1
+        sc x15, 0(dp)
+        mv tos, x13
+        call _parse_unsigned_core
+        beqz tos, 2f
+        sc x15, 0(dp)
+        not x15, x15
+        addi x15, x15, 1
+        j 4f
+3:      addi dp, dp, cell
+        li tos, 0
+        sc tos, 0(dp)
+4:      pop ra
+        ret
+        end_inlined
 	
 	## Actually parse an unsigned integer ( addr bytes base  -- u success )
 	define_internal_word "parse-unsigned-core", visible_flag
 _parse_unsigned_core:
-	push {lr}
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	pull_tos
-	movs r2, tos
-	pull_tos
-	movs r3, #0
-1:	cmp r1, #0
-	beq 3f
-	push_tos
-	ldrb tos, [r2]
-	subs r1, #1
-	adds r2, #1
-        cmp tos, #0x5F # underscore
-        bne 4f
+        addi sp, sp, -5*cell
+        scsp ra, 0(sp)
+        mv x15, tos
+        scsp x15, 1*cell(sp)
+        lc x14, 2*cell(dp)
+        lc x13, 1*cell(dp)
+        lc tos, 0(dp)
+        li x12, 0
+1:      beqz x14, 3f
+        push_tos
+        lbu tos, 0(x13)
+        addi x14, x14, -1
+        addi x13, x13, 1
+        li x11, 0x5F # underscore
+        bne tos, x11, 4f
         pull_tos
-        b 1b
-4:      muls r3, r0, r3
-	push_tos
-	movs tos, r0
-	push {r0, r1, r2, r3}
-	bl _parse_digit
-	pop {r0, r1, r2, r3}
-	cmp tos, #0
-	beq 2f
-	pull_tos
-	adds r3, r3, tos
-	pull_tos
-	b 1b
-2:	pull_tos
-	movs tos, #0
-	push_tos
-	movs tos, #0
-	pop {pc}
-3:	push_tos
-	movs tos, r3
-	push_tos
-	ldr tos, =-1
-	pop {pc}
-	end_inlined
+        j 1b
+4:      mul x12, x12, x15
+        push_tos
+        mv tos, x15
+        scsp x14, 2*cell(sp)
+        scsp x13, 3*cell(sp)
+        scsp x12, 4*cell(sp)
+        call _parse_digit
+        lcsp x12, 4*cell(sp)
+        lcsp x13, 3*cell(sp)
+        lcsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
+        beqz tos, 2f
+        pull_tos
+        add x12, x12, tos
+        pull_tos
+        j 1b
+2:      li tos, false_value
+        sc tos, 0(dp)
+        j 4f
+3:      addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        sc x12, 0(dp)
+        li tos, true_value
+4:      pop ra
+        ret
+        end_inlined
 
-	.ltorg
-	
 	## Parse a digit ( c base -- digit success )
 	define_word "parse-digit", visible_flag
 _parse_digit:
-	push {lr}
-        cmp tos, #2
-        blt 1f
-        cmp tos, #36
-        bgt 1f
-	movs r0, tos
-	pull_tos
-	cmp tos, #0x30
-	blt 1f
-	cmp tos, #0x39
-	bgt 2f
-	subs tos, #0x30
-	b 3f
-1:	movs tos, #0
-	push_tos
-	pop {pc}
-2:	push {r0}
-	bl _to_upper_char
-	pop {r0}
-	cmp tos, #0x41
-	blt 1b
-	cmp tos, #0x5A
-	bgt 1b
-	subs tos, #0x37
-3:	cmp tos, r0
-	bge 1b
-	push_tos
-	ldr tos, =-1
-	pop {pc}
+        addi sp, sp, -2*cell
+        scsp ra, 0(sp)
+        li x15, 2
+        blt tos, x15, 1f
+        li x15, 36
+        bgt tos, x15, 1f
+        mv x15, tos
+        pull_tos
+        li x14, 0x30
+        li x13, 0x39
+        blt tos, x14, 1f
+        bgt tos, x13, 2f
+        addi tos, tos, -0x30
+        j 3f
+1:      li tos, 0
+        push_tos
+        j 4f
+2:      scsp x15, cell(sp)
+        call _to_upper_char
+        lcsp x15, cell(sp)
+        li x14, 0x41
+        li x13, 0x5A
+        blt tos, x14, 1b
+        bgt tos, x13, 1b
+        addi tos, tos, -0x37
+3:      bge tos, x15, 1b
+        push_tos
+        li tos, true_value
+4:      lcsp ra, 0(sp)
+        addi sp, sp, 2*cell
+        ret
 	end_inlined
 	
 	## Start a colon definition
 	define_word ":", visible_flag
-_colon:	push {lr}
-	bl _token
-	cmp tos, #0
-	beq 1f
-	ldr r0, =state
-	ldr r1, =-1
-	str r1, [r0]
-	bl _asm_start
-	ldr r0, =current_flags
-	movs r1, #visible_flag
-	str r1, [r0]
-	pop {pc}
-1:	push_tos
-	ldr tos, =_token_expected
-	bl _raise
-	pop {pc}
-	end_inlined
+_colon: push ra
+        call _token
+        beqz tos, 1f
+        li x15, state
+        li x14, true_value
+        sc x14, 0(x15)
+        call _asm_start
+        li x15, current_flags
+        li x14, visible_flag
+        sc x14, 0(x15)
+        pop ra
+        ret
+1:      push_tos
+        li tos, _token_expected
+        call _raise
+        ret # Dummy instruction
+        end_inlined
 
 	## Start an anonymous colon definition
 	define_word ":noname", visible_flag
 _colon_noname:
-	push {lr}
-	push_tos
-	movs tos, #0
-	push_tos
-	movs tos, #0
-	ldr r0, =state
-	ldr r1, =-1
-	str r1, [r0]
-	bl _asm_start
-	ldr r0, =current_flags
-	movs r1, #0
-	str r1, [r0]
-	push_tos
-	ldr tos, =current_compile
-	ldr tos, [tos]
-        adds tos, #10
-	pop {pc}
-	end_inlined
+        push ra
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li tos, 0
+        sc tos, 0(dp)
+        li x15, state
+        li x14, true_value
+        sc x14, 0(x15)
+        call _asm_start
+        li x15, current_flags
+        li x14, 0
+        sc x14, 0(x15)
+        pop ra
+        ret
+1:      push_tos
+        li tos, _token_expected
+        call _raise
+        ret # Dummy instruction
+        end_inlined
 
 	## End a colon definition
 	define_word ";", visible_flag | immediate_flag
-_semi:	push {lr}
-	ldr r0, =state
-	ldr r1, [r0]
-	cmp r1, #0
-	beq 1f
-	movs r1, #0
-	str r1, [r0]
-	bl _asm_end
-	pop {pc}
-1:	push_tos
-	ldr tos, =_not_compiling
-	bl _raise
-	pop {pc}
+_semi:  push ra
+        li x15, =state
+        lc x14, 0(x15)
+        beqz x14, 1f
+        li x14, 0
+        sc x14, 0(x15)
+        call _asm_end
+        pop ra
+        ret
+1:      push_tos
+        li tos, _not_compiling
+        call _raise
+        ret # Dummy instruction
 	end_inlined
 
 	## Create a constant
 	define_word "constant", visible_flag
-_constant_4:
-	push {lr}
-	bl _token
-	cmp tos, #0
-	beq 1f
-	bl _asm_start
-	ldr r0, =current_flags
-	movs r1, #visible_flag | inlined_flag
-	str r1, [r0]
-	push_tos
-	movs tos, #6
-	bl _asm_push
-	push_tos
-	movs tos, #6
-	bl _asm_literal
-	bl _asm_end
-	pop {pc}
-1:	push_tos
-	ldr tos, =_token_expected
-	bl _raise
-	pop {pc}
-	end_inlined
+_constant_cell:
+        push ra
+        call _token
+        beqz tos, 1f
+        call _asm_start
+        li x15, current_flags
+        li x14, visible_flag | inlined_flag
+        sc x14, 0(x15)
+        push_tos
+        li tos, 8 # TOS
+        call _asm_push
+        push_tos
+        li tos, 8 @ TOS
+        call _asm_literal
+        call _asm_end
+        pop ra
+        ret
+1:      push_tos
+        li tos, _token_expected
+        call _raise
+        ret # Dummy instruction
+        end_inlined
 
-	.ltorg
-	
 	## Create a constant with a specified name as a string
 	define_internal_word "constant-with-name", visible_flag
-_constant_with_name_4:
-	push {lr}
-	bl _asm_start
-	ldr r0, =current_flags
-	movs r1, #visible_flag | inlined_flag
-	str r1, [r0]
-	push_tos
-	movs tos, #6
-	bl _asm_push
-	push_tos
-	movs tos, #6
-	bl _asm_literal
-	bl _asm_end
-	pop {pc}
+_constant_with_name_cell:
+        push ra
+        call _asm_start
+        li x15, current_flags
+        li x14, visible_flag | inlined_flag
+        sc x14, 0(x15)
+        push_tos
+        li tos, 8 # TOS
+        call _asm_push
+        push_tos
+        li tos, 8 @ TOS
+        call _asm_literal
+        call _asm_end
+        pop ra
+        ret
 	end_inlined
 
-	## Create a 2-word constant
+	## Create a 2-cell constant
 	define_word "2constant", visible_flag
-_constant_8:
-	push {lr}
-	bl _token
-	cmp tos, #0
-	beq 1f
-	bl _asm_start
-	ldr r0, =current_flags
-	movs r1, #visible_flag | inlined_flag
-	str r1, [r0]
-	push_tos
-	movs tos, #6
-	bl _asm_push
-	movs r0, tos
-	movs tos, #6
-	push {r0}
-	bl _asm_literal
-	push_tos
-	movs tos, #6
-	bl _asm_push
-	pop {r0}
-	push_tos
-	movs tos, r0
-	push_tos
-	movs tos, #6
-	bl _asm_literal
-	bl _asm_end
-	pop {pc}
-1:	push_tos
-	ldr tos, =_token_expected
-	bl _raise
-	pop {pc}
-	end_inlined
+_constant_double:
+        push ra
+        call _token
+        beqz tos, 1f
+        call _asm_start
+        li x15, current_flags
+        li x14, visible_flag | inlined_flag
+        sc x14, 0(x15)
+        push_tos
+        li tos, 8 # TOS
+        call _asm_push
+        push tos # We are pushing TOS onto the return stack here
+        li tos, 8 # TOS
+        call _asm_literal
+        push_tos
+        li tos, 8 # TOS
+        call _asm_push
+        push_tos
+        pop tos
+        push_tos
+        li tos, 8 # TOS
+        call _asm_literal
+        call _asm_end
+        pop ra
+        ret
+1:      push_tos
+        li tos, _token_expected
+        call _raise
+        ret # Dummy instruction
+        end_inlined
 
-	## Create a 2-word constant with a name specified as a string
+	## Create a 2-cell constant with a name specified as a string
 	define_internal_word "2constant-with-name", visible_flag
-_constant_with_name_8:
-	push {lr}
-	bl _token
-	cmp tos, #0
-	beq 1f
-	bl _asm_start
-	ldr r0, =current_flags
-	movs r1, #visible_flag | inlined_flag
-	str r1, [r0]
-	push_tos
-	movs tos, #6
-	bl _asm_push
-	push_tos
-	movs tos, #6
-	bl _asm_literal
-	push_tos
-	movs tos, #6
-	bl _asm_literal
-	bl _asm_end
-	pop {pc}
-1:	push_tos
-	ldr tos, =_token_expected
-	bl _raise
-	pop {pc}
+_constant_with_name_double:
+        push ra
+        call _asm_start
+        li x15, current_flags
+        li x14, visible_flag | inlined_flag
+        sc x14, 0(x15)
+        push_tos
+        li tos, 8 # TOS
+        call _asm_push
+        push tos # We are pushing TOS onto the return stack here
+        li tos, 8 # TOS
+        call _asm_literal
+        push_tos
+        li tos, 8 # TOS
+        call _asm_push
+        push_tos
+        pop tos
+        push_tos
+        li tos, 8 # TOS
+        call _asm_literal
+        call _asm_end
+        pop ra
+        ret
 	end_inlined
 
 	## Token expected exception handler
 	define_word "x-token-expected", visible_flag
 _token_expected:
-	push {lr}
+	push ra
 	string_ln "token expected"
-	bl _type
-	pop {pc}
+	call _type
+	pop ra
+        ret
 	end_inlined
 
 	## We are not currently compiling
 	define_word "x-not-compiling", visible_flag
 _not_compiling:
-	push {lr}
+	push ra
 	string_ln "not compiling"
-	bl _type
-	pop {pc}
+	call _type
+	pop ra
+        ret
 	end_inlined
 
 	## We are currently compiling to flash
 	define_word "x-compile-to-ram-only", visible_flag
 _compile_to_ram_only:
-	push {lr}
+	push ra
 	string_ln "compile to ram only"
-	bl _type
-	pop {pc}
+	call _type
+	pop ra
+        ret
 	end_inlined
-
-	.ltorg
-	
