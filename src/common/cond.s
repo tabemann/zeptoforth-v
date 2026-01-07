@@ -1,414 +1,386 @@
-@ Copyright (c) 2020-2023 Travis Bemann
-@
-@ Permission is hereby granted, free of charge, to any person obtaining a copy
-@ of this software and associated documentation files (the "Software"), to deal
-@ in the Software without restriction, including without limitation the rights
-@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-@ copies of the Software, and to permit persons to whom the Software is
-@ furnished to do so, subject to the following conditions:
-@ 
-@ The above copyright notice and this permission notice shall be included in
-@ all copies or substantial portions of the Software.
-@ 
-@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-@ SOFTWARE.
+# Copyright (c) 2020-2026 Travis Bemann
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
-        @@ Start a block
+        ## Start a block
         define_internal_word "begin-block", visible_flag
 _begin_block:
-        push {lr}
-        ldr r0, =block_begin_hook
-        ldr r0, [r0]
-        cmp r0, #0
-        beq 1f
-        movs r1, #1
-        orrs r0, r1
-        blx r0
-1:      pop {pc}
+        li x15, block_begin_hook
+        lc x15, 0(x15)
+        bez x15, 1f
+        jr x15
+1:      ret
         end_inlined
         
-        @@ End a block
+        ## End a block
         define_internal_word "end-block", visible_flag
 _end_block:
-        push {lr}
-        ldr r0, =block_exit_hook
-        ldr r0, [r0]
-        cmp r0, #0
-        beq 1f
-        movs r1, #1
-        orrs r0, r1
-        blx r0
-1:	ldr r0, =block_end_hook
-        ldr r0, [r0]
-        cmp r0, #0
-        beq 2f
-        movs r1, #1
-        orrs r0, r1
-        blx r0
-2:      pop {pc}
+        push ra
+        li x15, block_exit_hook
+        lc x15, 0(x15)
+        beqz x15, 1f
+        jalr ra, x15
+1:      li x15, block_end_hook
+        lc x15, 0(x15)
+        beqz x15, 2f
+        jalr ra, x15
+2:      pop ra
+        ret
         end_inlined
         
-	@@ Start an IF block
+	## Start an IF block
 	define_word "if", visible_flag | immediate_flag | compiled_flag
-_if:	push {lr}
-	bl _asm_undefer_lit
-	push_tos
-	movs tos, #0
-	push_tos
-	movs tos, #6
-	push_tos
-	movs tos, #0
-	bl _asm_lsl_imm
-	push_tos
-	movs tos, #6
-	bl _asm_pull
-	push_tos
-	movs tos, #0
-	push_tos
-	movs tos, #0
-	bl _asm_cmp_imm
-	bl _asm_reserve_branch
-        bl _begin_block
+_if:	push ra
+        call _asm_undefer_lit
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li tos, 8 # TOS
+        sc tos, 0(dp)
+        li tos, 15 # x15
+        call _asm_mv
         push_tos
-        movs tos, #syntax_if
-        bl _push_syntax
-	push_tos
-	ldr tos, =-1
-	pop {pc}
+        li tos, 8 # TOS
+        call _asm_pull
+        call _asm_reserve_branch
+        call _begin_block
+        push_tos
+        li tos, syntax_if
+        call _push_syntax
+        push_tos
+        li tos, -1
+        pop ra
+        ret
 	end_inlined
 
-	@@ ELSE in an IF ELSE THEN block
+	## ELSE in an IF ELSE THEN block
 	define_word "else", visible_flag | immediate_flag | compiled_flag
-_else:	push {lr}
-	bl _asm_undefer_lit
+_else:	addi sp, sp, -2*cell
+        scsp ra, 0(sp)
+        call _asm_undefer_lit
         push_tos
-        movs tos, #syntax_if
-        bl _verify_syntax
-        bl _drop_syntax
+        li tos, syntax_if
+        call _verify_syntax
+        call _drop_syntax
         push_tos
-        movs tos, #syntax_else
-        bl _push_syntax
-	cmp tos, #0
-	beq 1f
+        li tos, syntax_else
+        call _push_syntax
+        beqz tos, 1f
 	pull_tos
-        bl _end_block
-	movs r0, tos
+        call _end_block
+        mv x15, tos
 	pull_tos
-	push {r0}
-	bl _asm_reserve_branch
-	bl _current_here
-	pop {r0}
+        scsp x15, cell(sp)
+	call _asm_reserve_branch
+	call _current_here
+        lcsp x15, cell(sp)
 	push_tos
-	movs tos, r0
-	bl _asm_branch_zero_back
-        bl _begin_block
+	mv tos, x15
+	call _asm_branch_zero_back
+        call _begin_block
 	push_tos
-	movs tos, #0
-	pop {pc}
-1:	ldr tos, =_not_following_if
-	bl _raise
-	pop {pc}
+	li tos, false_value
+	lcsp ra, 0(sp)
+        addi sp, sp, 2*cell
+        ret
+1:	li tos, _not_following_if
+	call _raise
+	ret # Dummy instruction
 	end_inlined
 	
-	@@ Not following an IF exception
+	## Not following an IF exception
 	define_word "not-following-if", visible_flag
 _not_following_if:
-	push {lr}
-	string "not following if"
-	bl _type
-	pop {pc}
+	push ra
+	string_ln "not following if"
+	call _type
+	pop ra
+        ret
 	end_inlined
 	
-	@@ End an IF block
+	## End an IF block
 	define_word "then", visible_flag | immediate_flag | compiled_flag
-_then:	push {lr}
-	bl _asm_undefer_lit
-        push_tos
-        movs tos, #syntax_if
-        push_tos
-        movs tos, #syntax_else
-        bl _verify_syntax_2
-        bl _drop_syntax
-        bl _end_block
-	movs r1, tos
-	pull_tos
-	movs r0, tos
-	pull_tos
-	push {r0, r1}
-	bl _current_here
-	pop {r0, r1}
+_then:	addi sp, sp, -3*cell
+        scsp ra, 0(sp)
+	call _asm_undefer_lit
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li tos, syntax_if
+        sc tos, 0(dp)
+        li tos, syntax_else
+        call _verify_syntax_2
+        call _drop_syntax
+        call _end_block
+        mv x14, tos
+        lc x15, 0(dp)
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        scsp x15, 1*cell(sp)
+        scsp x14, 2*cell(sp)
+	call _current_here
+        lcsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
 	push_tos
-	movs tos, r0
-	cmp r1, #0
-	beq 1f
-	bl _asm_branch_zero_back
-	pop {pc}
-1:	bl _asm_branch_back
-	pop {pc}
+        li tos, x15
+        beqz x14, 1f
+	call _asm_branch_zero_back
+        j 2f
+1:	call _asm_branch_back
+2:      lcsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
 
-.ltorg
-        
-        @@ End an IF block without ending a block
+        ## End an IF block without ending a block
 	define_internal_word "then-no-block", visible_flag | immediate_flag | compiled_flag
 _then_no_block:
-        push {lr}
-	bl _asm_undefer_lit
-        push_tos
-        movs tos, #syntax_if
-        push_tos
-        movs tos, #syntax_else
-        bl _verify_syntax_2
-        bl _drop_syntax
-	movs r1, tos
-	pull_tos
-	movs r0, tos
-	pull_tos
-	push {r0, r1}
-	bl _current_here
-	pop {r0, r1}
+addi sp, sp, -3*cell
+        scsp ra, 0(sp)
+	call _asm_undefer_lit
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li tos, syntax_if
+        sc tos, 0(dp)
+        li tos, syntax_else
+        call _verify_syntax_2
+        call _drop_syntax
+        mv x14, tos
+        lc x15, 0(dp)
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        scsp x15, 1*cell(sp)
+        scsp x14, 2*cell(sp)
+	call _current_here
+        lcsp x14, 2*cell(sp)
+        lcsp x15, 1*cell(sp)
 	push_tos
-	movs tos, r0
-	cmp r1, #0
-	beq 1f
-	bl _asm_branch_zero_back
-	pop {pc}
-1:	bl _asm_branch_back
-	pop {pc}
+        li tos, x15
+        beqz x14, 1f
+        push_tos
+        li tos, 15 # x15
+	call _asm_branch_zero_back
+        j 2f
+1:	call _asm_branch_back
+2:      lcsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
 
-	@@ Start a BEGIN block
+	## Start a BEGIN block
 	define_word "begin", visible_flag | immediate_flag | compiled_flag
-_begin:	push {lr}
-	bl _asm_undefer_lit
-	bl _current_here
-        bl _begin_block
+_begin:	push ra
+        call _asm_undefer_lit
+        call _current_here
+        call _begin_block
         push_tos
-        movs tos, #syntax_begin
-        bl _push_syntax
-	pop {pc}
+        li tos, syntax_begin
+        call _push_syntax
+        pop ra
+        ret
+        end_inlined
 
-	@@ Start a WHILE block
+	## Start a WHILE block
 	define_word "while", visible_flag | immediate_flag | compiled_flag
-_while:	push {lr}
-	bl _asm_undefer_lit
+_while: push ra
+        call _asm_undefer_lit
         push_tos
-        movs tos, #syntax_begin
-        bl _verify_syntax
-        bl _drop_syntax
+        li tos, syntax_begin
+        call _verify_syntax
+        call _drop_syntax
         push_tos
-        movs tos, #syntax_while
-        bl _push_syntax
-        bl _end_block
-	push_tos
-	movs tos, #0
-	push_tos
-	movs tos, #6
-	push_tos
-	movs tos, #0
-	bl _asm_lsl_imm
-	push_tos
-	movs tos, #6
-	bl _asm_pull
-	push_tos
-	movs tos, #0
-	push_tos
-	movs tos, #0
-	bl _asm_cmp_imm
-	bl _asm_reserve_branch
-        bl _begin_block
-	pop {pc}
+        li tos, syntax_while
+        call _push_syntax
+        call _end_block
+        addi dp, dp -2*cell
+        sc tos, cell(dp)
+        li tos, 8 # TOS
+        sc tos, 0(dp)
+        li tos, 15 # x15
+        call _asm_mv
+        push_tos
+        li tos, 8 # TOS
+        call _asm_pull
+        call _asm_reserve_branch
+        call _begin_block
+        pop ra
+        ret
 	end_inlined
 
-	@@ End a BEGIN-WHILE-REPEAT block
+	## End a BEGIN-WHILE-REPEAT block
 	define_word "repeat", visible_flag | immediate_flag | compiled_flag
 _repeat:
-	push {lr}
-	bl _asm_undefer_lit
+        addi sp, sp, -2*cell
+        scsp ra, 0(sp)
+        call _asm_undefer_lit
         push_tos
-        movs tos, #syntax_while
-        bl _verify_syntax
-        bl _drop_syntax
-        bl _end_block
-	movs r0, tos
-	pull_tos
-	push {r0}
-	bl _asm_branch
-	bl _current_here
-	pop {r0}
-	push_tos
-	movs tos, r0
-	bl _asm_branch_zero_back
-	pop {pc}
-	end_inlined
+        li tos, syntax_while
+        call _verify_syntax
+        call _drop_syntax
+        call _end_block
+        scsp tos, cell(sp)
+        pull_tos
+        call _asm_branch
+        call _current_here
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        lcsp tos, cell(sp)
+        sc tos, 0(dp)
+        li tos, 15 # x15
+        call _asm_branch_zero_back
+        lcsp ra, 0(sp)
+        addi sp, sp, 2*cell
+        ret
+        end_inlined
 
-	@@ End a BEGIN-UNTIL block
+	## End a BEGIN-UNTIL block
 	define_word "until", visible_flag | immediate_flag | compiled_flag
-_until:	push {lr}
-	bl _asm_undefer_lit
+_until:	push ra
+        call _asm_undefer_lit
         push_tos
-        movs tos, #syntax_begin
-        bl _verify_syntax
-        bl _drop_syntax
-        bl _end_block
-	push_tos
-	movs tos, #0
-	push_tos
-	movs tos, #6
-	push_tos
-	movs tos, #0
-	bl _asm_lsl_imm
-	push_tos
-	movs tos, #6
-	bl _asm_pull
-	push_tos
-	movs tos, #0
-	push_tos
-	movs tos, #0
-	bl _asm_cmp_imm
-	bl _asm_branch_zero
-	pop {pc}
+        li tos, syntax_begin
+        call _verify_syntax
+        call _drop_syntax
+        call _end_block
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li tos, 8 # TOS
+        sc tos, 0(dp)
+        li tos, 15 # x15
+        call _asm_mv
+        push_tos
+        li tos, 8 # TOS
+        call _asm_pull
+	call _asm_branch_zero
+	pop ra
+        ret
 	end_inlined
 
-	@@ End a BEGIN-AGAIN block
+	## End a BEGIN-AGAIN block
 	define_word "again", visible_flag | immediate_flag | compiled_flag
-_again:	push {lr}
-	bl _asm_undefer_lit
+_again:	push ra
+	call _asm_undefer_lit
         push_tos
-        movs tos, #syntax_begin
-        bl _verify_syntax
-        bl _drop_syntax
-        bl _end_block
-	bl _asm_branch
-	pop {pc}
+        li tos, syntax_begin
+        call _verify_syntax
+        call _drop_syntax
+        call _end_block
+	call _asm_branch
+	pop ra
+        ret
 	end_inlined
 
-	@@ Implement the core of DO
+	## Implement the core of DO
 	define_internal_word "(do)", visible_flag
-_xdo:
-	.if cortex_m7 || cortex_m33
-	ldr r0, [dp], #4
-	ldr r1, [dp], #4
-	ldr r2, [dp], #4
-	.else
-	ldmia dp!, {r0, r1, r2}
-	.endif
-	
-	push {tos}
-	push {r0}
-	push {r1}
-	movs tos, r2
-	bx lr
+_xdo:   lc x15, 0(dp)
+        lc x14, 1*cell(dp)
+        lc x13, 2*cell(dp)
+        sc tos, 2*cell(dp)
+        sc x15, 1*cell(dp)
+        sc x14, 0(dp)
+        mv tos, x13
+        ret
 	end_inlined
 
-	@@ Implement the core of ?DO
+	## Implement the core of ?DO
 	define_internal_word "(?do)", visible_flag
-_xqdo:
-	.if cortex_m7 || cortex_m33
-	ldr r0, [dp], #4
-	ldr r1, [dp], #4
-	ldr r2, [dp], #4
-	.else
-	ldmia dp!, {r0, r1, r2}
-	.endif
-	
-	cmp r0, r1
-	beq 1f
-	push {tos}
-	push {r0}
-	push {r1}
-	movs tos, r2
-	bx lr
-1:	movs r0, tos
-	movs tos, r2
-	bx r0
-	end_inlined
+_xqdo:  lc x15, 0(dp)
+        lc x14, 1*cell(dp)
+        lc x13, 2*cell(dp)
+        addi dp, dp, 3*cell
+        beq x15, x14, 1f
+        addi dp, dp, -3*cell
+        sc tos, 2*cell(dp)
+        sc x15, 1*cell(dp)
+        sc x14, 0(dp)
+        mv tos, x13
+        ret
+1:      mv x15, tos
+        mv tos, x13
+        jr x15
+        ret # Dummy instruction
+        end_inlined
 
-	@@ Implement the core of LOOP
+	## Implement the core of LOOP
 	define_internal_word "(loop)", visible_flag
-_xloop:	ldr r0, [sp, #4]
-	ldr r1, [sp, #0]
-	adds r0, #1
-	cmp r0, r1
-	beq 1f
-	str r0, [sp, #4]
-	movs r0, tos
-	pull_tos
-	bx r0
-1:	pull_tos
-	mov r0, sp
-	adds r0, #12
-	mov sp, r0
-	bx lr
-	end_inlined
+_xloop: lcsp x15, cell(sp)
+        lcsp x14, 0(sp)
+        addi x15, x15, 1
+        beq x15, x14, 1f
+        scsp x15, cell(sp)
+        mv x15, tos
+        pull_tos
+        jr x15
+1:      pull_tos
+        addi sp, sp, 3*cell
+        ret
+        end_inlined
 
-	@@ Implement the core of +LOOP
+	## Implement the core of +LOOP
 	define_internal_word "(+loop)", visible_flag
 _xploop:
-	ldr r0, [sp, #4]
-	ldr r1, [sp, #0]
-	ldr r2, [dp, #0]
-	cmp r2, #0
-	blt 1f
-	adds r0, r2
-	cmp r0, r1
-	bge 2f
-	str r0, [sp, #4]
-	movs r0, tos
-	adds dp, #4
-	pull_tos
-	bx r0
-1:	adds r0, r2
-	cmp r0, r1
-	blt 2f
-	str r0, [sp, #4]
-	movs r0, tos
-	adds dp, #4
-	pull_tos
-	bx r0
-2:	adds dp, #4
-	pull_tos
-	mov r0, sp
-	adds r0, #12
-	mov sp, r0
-	bx lr
+        lcsp x15, cell(sp)
+        lcsp x14, 0(sp)
+        lc x13, 0(dp)
+        blt x13, zero, 1f
+        add x15, x15, x13
+        bge x15, x14, 2f
+        scsp x15, cell(sp)
+        mv x15, tos
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        jr x15
+1:      add x15, x15, x13
+        blt x15, x14, 2f
+        scsp x15, cell(sp)
+        mv x15, tos
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        jr x15
+2:      lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
 
-	@@ Get the outermost loop index
+	## Get the outermost loop index
 	define_word "i", visible_flag | inlined_flag
 _i:	push_tos
-	ldr tos, [sp, #4]
-	bx lr
+        lcsp tos, cell(sp)
+        ret
 	end_inlined
 
-	@@ Get the first inner loop index
+	## Get the first inner loop index
 	define_word "j", visible_flag | inlined_flag
 _j:	push_tos
-	ldr tos, [sp, #16]
-	bx lr
+	lcsp tos, 4*cell(sp)
+	ret
 	end_inlined
 
-	@@ Leave a do loop
+	## Leave a do loop
 	define_word "leave", visible_flag
-_leave:	mov r0, sp
-	adds r0, #8
-	mov sp, r0
-	pop {pc}
+_leave:	lcsp ra, 2*cell(sp)
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
 
-	@@ Unloop a do loop
+	## Unloop a do loop
 	define_word "unloop", visible_flag | inlined_flag
 _unloop:
-	mov r0, sp
-	adds r0, #12
-	mov sp, r0
-	bx lr
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
-	
-	.ltorg
-	
