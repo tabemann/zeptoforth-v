@@ -503,7 +503,7 @@ _current_here:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _here
         pop ra
         ret
@@ -518,7 +518,7 @@ _current_allot:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _allot
         pop ra
         ret
@@ -533,7 +533,7 @@ _emit:	push ra
         call _emit_hook
         lc x15, 0(tos)
         pull_tos
-        beqz x15, 1f
+        beq x15, zero, 1f
         jr x15
 1:      pop ra
         ret
@@ -546,7 +546,7 @@ _emit_q:
         call _emit_q_hook
         lc x15, 0(tos)
         pull_tos
-        beqz x15, 1f
+        beq x15, zero, 1f
         jr x15
         pop ra
         ret
@@ -587,7 +587,7 @@ _type:  addi sp, sp, -3*cell
         lc x14, 0(dp)
         lc tos, cell(dp)
         addi dp, dp, 2*cell
-1:      beqz x15, 2f
+1:      beq x15, zero, 2f
         push_tos
         lbu tos, 0(x14)
         scsp x15, 1*cell(sp)
@@ -612,7 +612,7 @@ _serial_type:
         lc x14, 0(dp)
         lc tos, cell(dp)
         addi dp, dp, 2*cell
-1:      beqz x15, 2f
+1:      beq x15, zero, 2f
         push_tos
         lbu tos, 0(x14)
         scsp x15, 1*cell(sp)
@@ -643,7 +643,7 @@ _key:   push ra
         call _key_hook
         lc x15, 0(tos)
         pull_tos
-        beqz x15, 1f
+        beq x15, zero, 1f
         jr x15
         pop ra
         ret
@@ -659,7 +659,7 @@ _key_q:	push ra
         call _key_q_hook
         lc x15, 0(tos)
         pull_tos
-        beqz x15, 1f
+        beq x15, zero, 1f
         jr x15
         pop ra
         ret
@@ -713,7 +713,7 @@ _inline_execute:
 _execute_nz:
         mv x15, tos
         pull_tos
-        beqz x15, 1f
+        beq x15, zero, 1f
         jr x15
 1:      ret
 	end_inlined
@@ -730,7 +730,7 @@ _exit:  push ra
         call _asm_undefer_lit
         li x15, word_exit_hook
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         jal ra,r x15
 1:      call _asm_exit
         pop ra
@@ -775,11 +775,11 @@ _init_dict:
 	## Find the last visible word
 	define_internal_word "find-last-visible-word", visible_flag
 _find_last_visible_word:
-1:      beqz tos, 2f
+1:      beq tos, zero, 2f
         lc x15, 0(tos)
         li x14, visible_flag
         and x14, x14, x15
-        bnez x14, 2f
+        bne x14, zero, 2f
         lc tos, cell(tos)
         j 1b
 2:      ret
@@ -797,7 +797,7 @@ _init:	ret
 _find_execute:
         push ra
         call _find_all
-        beqz tos, 1f
+        beq tos, zero, 1f
         call _to_xt
         call _execute
         pop ra
@@ -985,9 +985,9 @@ _compile:
 _token_word:
         push ra
         call _token
-        beqz tos, 1f
+        beq tos, zero, 1f
         call _find
-        beqz tos, 2f
+        beq tos, zero, 2f
         pop ra
         ret
 1:      li tos, _token_expected
@@ -1025,7 +1025,7 @@ _postpone:
         addi sp, sp, -3*cell
         scsp ra, 0(sp)
         call _token
-        bnez tos, 1f
+        bne tos, zero, 1f
         li tos, _token_expected
         call _raise
 1:      mv x14, tos
@@ -1033,7 +1033,7 @@ _postpone:
         scsp x15, 1*cell(sp)
         scsp x14, 2*cell(sp)
         call _find
-        bnez tos, 1f
+        bne tos, zero, 1f
         lcsp tos, 1*cell(sp)
         push_tos
         lcsp tos, 2*cell(sp)
@@ -1047,9 +1047,9 @@ _postpone:
         j 2f
 1:      lc x15, 0(tos)
         andi x14, x15, immediate_flag
-        beqz x14, 1f
+        beq x14, zero, 1f
         andi x14, x15, inlined_flag
-        bnez x14, 3f
+        bne x14, zero, 3f
         call _to_xt
         call _compile
         j 2f
@@ -1067,7 +1067,7 @@ _postpone:
         push_tos
         lcsp x15, cell(sp)
         andi x15, x15, inlined_flag
-        bnez x15, 2f
+        bne x15, zero, 2f
         li tos, _compile
         call _compile
         j 2f
@@ -1084,7 +1084,7 @@ _comma_lit:
         push ra
         li x14, literal_deferred_q
         li x15, 0(x14)
-        beqz x15, 1f
+        beq x15, zero, 1f
         call _asm_undefer_lit
 1:      li x13, deferred_literal
         sc tos, 0(x13)
@@ -1094,7 +1094,7 @@ _comma_lit:
         pull_tos
         li x15, postpone_literal_q
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         push_tos
         li tos, _comma_lit
         call _compile
@@ -1689,7 +1689,7 @@ _store_current_1:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _store_1
         j 2f
 1:      call _store_flash_1
@@ -1703,7 +1703,7 @@ _store_current_2:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _store_2
         j 2f
 1:      call _store_flash_2
@@ -1717,7 +1717,7 @@ _store_current_4:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _store_4
         j 2f
 1:      call _store_flash_4
@@ -1731,7 +1731,7 @@ _store_current_cell:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _store_cell
         j 2f
 1:      call _store_flash_cell
@@ -1745,7 +1745,7 @@ _store_current_double:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _store_double
         j 2f
 1:      call _store_flash_double
@@ -1759,7 +1759,7 @@ _current_comma_1:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _comma_1
         j 2f
 1:      call _flash_comma_1
@@ -1773,7 +1773,7 @@ _current_comma_2:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _comma_2
         j 2f
 1:      call _flash_comma_2
@@ -1787,7 +1787,7 @@ _current_comma_4:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _comma_4
         j 2f
 1:      call _flash_comma_4
@@ -1801,7 +1801,7 @@ _current_comma_cell:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _comma_cell
         j 2f
 1:      call _flash_comma_cell
@@ -1815,7 +1815,7 @@ _current_comma_double:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _comma_double
         j 2f
 1:      call _flash_comma_double
@@ -1984,7 +1984,7 @@ _current_reserve_1:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _reserve_1
         j 2f
 1:      call _flash_reserve_1
@@ -1998,7 +1998,7 @@ _current_reserve_2:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _reserve_2
         j 2f
 1:      call _flash_reserve_2
@@ -2012,7 +2012,7 @@ _current_reserve_4:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _reserve_4
         j 2f
 1:      call _flash_reserve_4
@@ -2026,7 +2026,7 @@ _current_reserve_cell:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _reserve_cell
         j 2f
 1:      call _flash_reserve_cell
@@ -2040,7 +2040,7 @@ _current_reserve_double:
         push ra
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
         call _reserve_double
         j 2f
 1:      call _flash_reserve_double
@@ -2060,7 +2060,7 @@ _current_comma_align:
         call _current_here
         lcsp x15, cell(sp)
         and tos, tos, x15
-        beqz tos, 2f
+        beq tos, zero, 2f
         li tos, 0
         scsp x15, cell(sp)
         call _current_comma_1
@@ -2084,7 +2084,7 @@ _flash_comma_align:
         call _flash_here
         lcsp x15, cell(sp)
         and tos, tos, x15
-        beqz tos, 2f
+        beq tos, zero, 2f
         li tos, 0
         scsp x15, cell(sp)
         call _flash_comma_1
@@ -2108,7 +2108,7 @@ _comma_align:
         call _here
         lcsp x15, cell(sp)
         and tos, tos, x15
-        beqz tos, 2f
+        beq tos, zero, 2f
         li tos, 0
         scsp x15, cell(sp)
         call _comma_1
@@ -2134,7 +2134,7 @@ _current_comma_cstring:
         pull_tos
         mv x14, tos
         pull_tos
-2:      beqz x15, 1f
+2:      beq x15, zero, 1f
         push_tos
         lbu tos, 0(x14)
         scsp x15, 1*cell(sp)
@@ -2279,7 +2279,7 @@ _get_order:
         lc x14, 0(x14)
         slli x13, x14, 1
         add x15, x15, x13
-3:      beqz x13, 4f
+3:      beq x13, zero, 4f
         addi x13, x13, -2
         addi x15, x15, -2
         push_tos
@@ -2295,11 +2295,11 @@ _get_order:
 _set_order:
         li x15, order
         li x14, order_count
-        beqz tos, 5f
+        beq tos, zero, 5f
 2:      sc tos, 0(x14)
         mv x14, tos
         pull_tos
-3:      beqz x14, 4f
+3:      beq x14, zero, 4f
         addi x14, x14, -1
         sh tos, 0(x15)
         pull_tos
@@ -2387,7 +2387,7 @@ _init_variables:
         li x14, _serial_emit_q
         sc x14, emit_q_hook_offset(x15)
 	li x13, cpu_count * cell
-1:	beqz x13, 2f
+1:	beq x13, zero, 2f
         addi x13, x13, -cell
         li x14, true_value
 	li x15, pause_enabled

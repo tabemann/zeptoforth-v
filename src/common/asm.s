@@ -18,15 +18,300 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
+        ## Test whether a register is a compressed register
+        ## ( reg -- compressed? )
+        define_internal_word "c-reg?", visible_flag
+_asm_q_c_reg:
+        li x15, 7
+        sltu x14, x15, tos
+        li x15, 16
+        sltu x13, tos, x15
+        and tos, x13, x14
+        srai tos, tos, sign_shift
+        ret
+        end_inlined
+
+        ## Compress a register
+        ## ( reg -- c-reg )
+        define_internal_word ">c-reg", visible_flag
+_asm_to_c_reg:
+        addi tos, tos, -8
+        ret
+        end_inlined
+
+        ## Compute immediate field of c.j and c.jal -- transform PC-relative
+        ## offset into imm[11 | 4 | 9:8 | 10 | 6 | 7 | 3:1 | 5 ] | 00
+        ## ( offset -- imm-field )
+        define_internal_word "transform-c.j-imm", visible_flag
+_asm_transform_c_j_imm:
+        srli x15, tos, 11
+        andi x15, x15, 1
+        slli x15, x15, 12
+        srli x14, tos, 4
+        andi x14, x14, 1
+        slli x14, x14, 11
+        or x15, x15, x14
+        srli x14, tos, 8
+        andi x14, x14, 3
+        slli x14, x14, 9
+        or x15, x15, x14
+        srli x14, tos, 10
+        andi x14, x14, 1
+        slli x14, x14, 8
+        or x15, x15, x14
+        srli x14, tos, 6
+        andi x14, x14, 1
+        slli x14, x14, 7
+        or x15, x15, x14
+        srli x14, tos, 7
+        andi x14, x14, 1
+        slli x14, x14, 6
+        or x15, x15, x14
+        srli x14, tos, 1
+        andi x14, x14, 7
+        slli x14, x14, 3
+        or x15, x15, x14
+        srli x14, tos, 5
+        andi x14, x14, 1
+        slli x14, x14, 2
+        or tos, x15, x14
+        ret
+        end_inlined
+
+        ## Compile a c.j instruction -- imm is a PC relative offset, lowest
+        ## bit is ignored.
+        ## ( imm -- )
+        define_internal_word "c.j," visible_flag
+_asm_c_j:
+        push ra
+        call _asm_transform_c_j_imm
+        li x15, (5 << 13) | (1 << 0) # C.J
+        or tos, tos, x15
+        call _current_comma_2
+        pop ra
+        ret
+        end_inlined
+
+        ## Compile a c.jal instruction -- imm is a PC relative offset, lowest
+        ## bit is ignored.
+        ## ( imm -- )
+        define_internal_word "c.jal," visible_flag
+_asm_c_jal:
+        push ra
+        call _asm_transform_c_j_imm
+        li x15, (1 << 13) | (1 << 0) # C.JAL
+        or tos, tos, x15
+        call _current_comma_2
+        pop ra
+        ret
+        end_inlined
+        
+        ## Compile a mv instruction
+        ## ( src-reg dest-reg -- )
+        define_internal_word "mv,", visible_flag
+_asm_mv:
+        push ra
+        lc x15, 0(dp)
+        addi dp, dp, cell
+        slli tos, tos, 7
+        slli x15, x15, 2
+        or tos, x15
+        li x15, 0x8002 # C.MV
+        or tos, x15
+        call _current_comma_2
+        pop ra
+        ret
+        end_inlined
+
+        ## Compile an addi instruction
+        ## ( imm rs1 rd -- )
+        define_internal_word "addi," visible_flag
+_asm_addi:
+        push ra
+        lc x15, 0(dp)
+        lc x14, cell(dp)
+        addi dp, dp, 2*cell
+        slli tos, tos, 7
+        slli x15, x15, 15
+        or tos, tos, x15
+        slli x14, x14, 20
+        or tos, tos, x14
+        li x15, 0x13 # ADDI
+        or tos, tos, x15
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
+
+        ## Compile a lui instruction -- note that the lower 12 bits of imm
+        ## are ignored.
+        ## ( imm rd -- )
+        define_internal_word "lui," visible_flag
+_asm_lui:
+        push ra
+        lc x15, 0(dp)
+        addi dp, dp, cell
+        slli tos, tos, 7
+        li x14, 0xFFFFF000
+        and x15, x15, x14
+        or tos, tos, x15
+        lli x15, 0x37 # LUI
+        or tos, tos, x15
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
+
+        ## Compile a c.addi instruction -- nzimm is a sign-extended 6 bit value
+        ## that cannot be zeror.
+        ## ( nzimm rd -- )
+        define_internal_word "c.addi," visible_flag
+_asm_c_addi:
+        push ra
+        lc x14, 0(dp)
+        addi dp, dp, cell
+        slli tos, tos, 7
+        srai x15, x14, 5
+        andi x15, x15, 0x01
+        slli x15, x15, 12
+        andi x14, x14, 0x1F
+        slli x14, x14, 2
+        or tos, tos, x14
+        or tos, tos, x15
+        li x15, 0x01 # C.ADDI
+        or tos, tos, x15
+        call _current_comma_2
+        pop ra
+        ret
+        end_inlined
+
+        ## Compile a c.li instruction -- imm is a sign-extended 6 bit value
+        ## ( imm rd -- )
+_asm_c_li:
+        push ra
+        lc x14, 0(dp)
+        addi dp, dp, cell
+        slli tos, tos, 7
+        srai x15, x14, 5
+        andi x15, x15, 0x01
+        slli x15, x15, 12
+        andi x14, x14, 0x1F
+        slli x14, x14, 2
+        or tos, tos, x14
+        or tos, tos, x15
+        li x15, (2 << 13) | (1 << 0) # C.LI
+        or tos, tos, x15
+        call _current_comma_2
+        pop ra
+        ret
+        end_inlined
+
+        ## Compile a c.lui instruction -- note that the lower 12 bits and the
+        ## upper 14 bits of imm are ignored.
+        ## ( imm rd -- )
+_asm_c_lui:
+        push ra
+        lc x15, 0(dp)
+        addi dp, dp, cell
+        slli tos, tos, 7
+        li x14, 0x0003F000
+        and x15, x15, x14
+        srli x14, x15, 5
+        or tos, tos, x14
+        slli x15, x15, sign_shift - 16
+        srli x15, x15, sign_shift - 6
+        or tos, tos, x15
+        li x15, (3 << 13) | (1 << 0) # C.LUI
+        or tos, tos, x15
+        call _current_comma_2
+        pop ra
+        ret
+        end_inlined
+        
         ## Compile:
         ##
-        ## lcsp ra, 0(sp)
-        ## addi sp, sp, cell
-        ## ret
+        ## c.lwsp ra, 0(sp)
+        ## c.addi sp, sp, cell
+        ## c.jr ra
         define_internal_word "exit,", visible_flag
 _asm_exit:
-        ## Add more here later
+        push ra
+        # Note: the instructions are loaded onto the stack in reverse order.
+        addi dp, dp, -3*cell
+        sc tos, 2*cell(dp)
+        li tos, (4 << 13) | (1 << 7) | (2 << 0) # c.jr ra
+        sc tos, 1*cell(dp)
+        li tos, (0 << 13) | (2 << 7) | (4 << 2) | (1 << 0) # c.addi sp, sp, 4
+        sc tos, 0(dp)
+        li tos, (2 << 13) | (1 << 7) | (2 << 0) # c.lwsp ra, 0(sp)
+        call _current_comma_2
+        call _current_comma_2
+        call _current_comma_2
+        pop ra
         ret
+        end_inlined
+
+        ## Compile:
+        ##
+        ## c.addi dp, dp, -cell
+        ## (c.)sw reg, 0(dp)
+        ##
+        ## ( reg -- )
+        define_internal_word "push,", visible_flag
+_asm_push:
+        push ra
+        push_tos
+        # c.addi dp, dp, -cell
+        li tos, (1 << 12) | (8 << 7) | ((-4 & 0x1F) << 2) | (1 << 0)
+        call _current_comma_2
+        call _dup
+        call _asm_q_c_reg
+        beq tos, zero, 1f
+        pull_tos
+        call _asm_to_c_reg
+        slli tos, tos, 2
+        li x15, (6 << 13) | ((8 - 8) << 7) # c.sw reg, 0(dp)
+        or tos, tos, x15
+        call _current_comma_2
+        pop ra
+        ret
+1:      pull_tos
+        slli tos, tos, 20
+        li x15, (8 << 15) | (2 << 12) | (0x23 << 0) # sw reg, 0(dp)
+        or tos, tos, x15
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
+
+        ## Compile:
+        ##
+        ## (c.)lw reg, 0(dp)
+        ## c.addi dp, dp, -cell
+        ##
+        ## ( reg -- )
+        define_internal_word "push,", visible_flag
+_asm_push:
+        push ra
+        call _dup
+        call _asm_q_c_reg
+        beq tos, zero, 1f
+        pull_tos
+        call _asm_to_c_reg
+        slli tos, tos, 2
+        li x15, (2 << 13) | ((8 - 8) << 7) # c.lw reg, 0(dp)
+        or tos, tos, x15
+        call _current_comma_2
+        j 2f
+1:      pull_tos
+        slli tos, tos, 7
+        li x15, (8 << 15) | (2 << 12) | (0x03 << 0) # lw reg, 0(dp)
+        or tos, tos, x15
+        call _current_comma_4
+2       push_tos
+        li tos, (8 << 7) | (4 << 2) | (1 << 0) # c.addi dp, dp, cell
+        call _current_comma_2
+
         end_inlined
         
 	## Compile the header of a word
@@ -2611,34 +2896,6 @@ _asm_sub_imm:
 	ands tos, r0
 	orrs tos, r1
 	ldr r0, =0x3800
-	orrs tos, r0
-	bl _current_comma_2
-	pop {pc}
-	end_inlined
-
-	## Assemble instructions to pull a value from the stack
-	define_internal_word "pull,", visible_flag
-_asm_pull:
-	push {lr}
-	push_tos
-	ldr tos, =0xF857
-	bl _current_comma_2
-	lsls tos, tos, #12
-	ldr r0, =0x0B04
-	orrs tos, r0
-	bl _current_comma_2
-	pop {pc}
-	end_inlined
-
-	## Assemble instructions to push a value onto the stack
-	define_internal_word "push,", visible_flag
-_asm_push:
-	push {lr}
-	push_tos
-	ldr tos, =0xF847
-	bl _current_comma_2
-	lsls tos, tos, #12
-	ldr r0, =0x0D04
 	orrs tos, r0
 	bl _current_comma_2
 	pop {pc}

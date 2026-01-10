@@ -34,11 +34,11 @@ _end_block:
         push ra
         li x15, block_exit_hook
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         jalr ra, x15
 1:      li x15, block_end_hook
         lc x15, 0(x15)
-        beqz x15, 2f
+        beq x15, zero, 2f
         jalr ra, x15
 2:      pop ra
         ret
@@ -80,7 +80,7 @@ _else:	addi sp, sp, -2*cell
         push_tos
         li tos, syntax_else
         call _push_syntax
-        beqz tos, 1f
+        beq tos, zero, 1f
 	pull_tos
         call _end_block
         mv x15, tos
@@ -137,7 +137,7 @@ _then:	addi sp, sp, -3*cell
         lcsp x15, 1*cell(sp)
 	push_tos
         li tos, x15
-        beqz x14, 1f
+        beq x14, zero, 1f
 	call _asm_branch_zero_back
         j 2f
 1:	call _asm_branch_back
@@ -170,7 +170,7 @@ addi sp, sp, -3*cell
         lcsp x15, 1*cell(sp)
 	push_tos
         li tos, x15
-        beqz x14, 1f
+        beq x14, zero, 1f
         push_tos
         li tos, 15 # x15
 	call _asm_branch_zero_back

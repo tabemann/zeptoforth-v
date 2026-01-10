@@ -58,7 +58,7 @@ _token_start:
         scsp x14, cell(sp)
         call _ws_q
         lcsp x14, cell(sp)
-        beqz tos, 2f
+        beq tos, zero, 2f
         addi x14, x14, 1
         j 1b
 2:      mv tos, x14
@@ -84,7 +84,7 @@ _token_end:
         scsp x14, cell(sp)
         call _ws_q
         lcsp x14, cell(sp)
-        bnez tos, 2f
+        bne tos, zero, 2f
         addi x14, x14, 1
         j 1b
 2:      mov tos, x14
@@ -140,7 +140,7 @@ _line_comment:
         lcsp x13, 3*cell(sp)
         lcsp x14, 2*cell(sp)
         lcsp x15, 1*cell(sp)
-        beqz tos, 2f
+        beq tos, zero, 2f
         addi x15, x15, 1
         j 1b
 2:      pull_tos
@@ -167,7 +167,7 @@ _paren_comment:
         add x12, x15, x13
         lbu x12, 0(x12)
         addi x12, x12, -0x29
-        beqz x12, 2f
+        beq x12, zero, 2f
         addi x15, x15, 1
         j 1b
 2:      addi x15, x15, 1
@@ -184,7 +184,7 @@ _to_upper_char:
         sltiu x14, tos, 0x61
         slti x13, x15, tos
         or x14, x14, x13
-        bnez x14, 2f
+        bne x14, zero, 2f
         addi tos, tos, -0x20
 1:      ret
 	end_inlined
@@ -198,7 +198,7 @@ _equal_case_strings:
         lc x12, 2*cell(dp)
         addi dp, dp, 3*cell
         beq x15, x13, 3f
-1:      beqz x15, 2f
+1:      beq x15, zero, 2f
         lbu x13, 0(x14)
         addi x14, x14, 1
         li x11, 0x61
@@ -232,10 +232,10 @@ _find_dict:
         lc x13, 1*cell(dp)
         lc x12, 2*cell(dp)
         addi dp, dp, 3*cell
-1:      beqz x15, 3f
+1:      beq x15, zero, 3f
         lhu x11, 0(x15)
         andi x11, x11, visible_flag
-        beqz x11, 2f
+        beq x11, zero, 2f
         lhu x11, 2(x15)
         bne x11, x10, 2f
         lbu x11, 4+cell(x15)
@@ -258,7 +258,7 @@ _find_dict:
         lcsp x12, 4*cell(sp)
         lcsp x11, 5*cell(sp)
         lcsp x10, 6*cell(sp)
-        bnez tos, 4f
+        bne tos, zero, 4f
 2:      lc x15, 4(x15)
         j 1b
 3:      li tos, false_value
@@ -288,7 +288,7 @@ _find_in_wordlist:
         scsp ra, 0(sp)
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
 3:      mv x15, tos
         pull_tos
         scsp x15, cell(sp)
@@ -302,7 +302,7 @@ _find_in_wordlist:
         scsp x15, cell(sp)
         call _find_dict
         lcsp x15, cell(sp)
-        bnez tos, 2f
+        bne tos, zero, 2f
 4:      li x14, flash_latest
         lc tos, 0(x14)
         push_tos
@@ -313,7 +313,7 @@ _find_in_wordlist:
         ret
 1:      li x15, state
         lc x15, 0(x15)
-        beqz x15, 3b
+        beq x15, zero, 3b
         mv x15, tos
         j 4b
 2:      addi dp, dp, 2*cell
@@ -331,7 +331,7 @@ _do_find:
         li x15, order_count
         lc x15, 0(x15)
         li x14, order
-1:      beqz x15, 2f
+1:      beq x15, zero, 2f
         scsp x15, 1*cell(sp)
         scsp x14, 2*cell(sp)
         call _2dup
@@ -341,7 +341,7 @@ _do_find:
         call _find_in_wordlist
         lcsp x14, 2*cell(sp)
         lcsp x15, 1*cell(sp)
-        bnez tos, 3f
+        bne tos, zero, 3f
         addi x15, x15, -1
         addi x14, x14, 2
         pull_tos
@@ -360,7 +360,7 @@ _do_find:
 	define_word "find", visible_flag
 _find:	li x15, find_hook
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         jr x15
 1:      push_tos
         li tos, _hook_needed
@@ -374,7 +374,7 @@ _find:	li x15, find_hook
 _find_raw:
         li x15, find_raw_hook
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         jr x15
 1:      push_tos
         li tos, _hook_needed
@@ -403,10 +403,10 @@ _find_all_dict:
         lc x13, 0(dp)
         lc x12, cell(dp)
         addi dp, dp, 2*cell
-1:      beqz x15, 3f
+1:      beq x15, zero, 3f
         lhu x11, 0(x15)
         andi x11, x11, visible_flag
-        beqz x11, 2f
+        beq x11, zero, 2f
         lbu x11, 4+cell(x15)
         addi dp, dp, 3*cell
         sc x12, 2*cell(dp)
@@ -425,7 +425,7 @@ _find_all_dict:
         lcsp x13, 3*cell(sp)
         lcsp x12, 4*cell(sp)
         lcsp x11, 5*cell(sp)
-        bnez tos, 4f
+        bne tos, zero, 4f
 2:      lc x15, 4(x15)
         j 1b
 3:      li tos, false_value
@@ -444,7 +444,7 @@ _find_all:
         scsp ra, 0(sp)
         li x15, compiling_to_flash
         lc x15, 0(x15)
-        bnez x15, 1f
+        bne x15, zero, 1f
 3:      mv x14, tos
         pull_tos
         mv x13, tos
@@ -458,7 +458,7 @@ _find_all:
         call _find_all_dict
         lcsp x13, 2*cell(sp)
         lcsp x14, 1*cell(sp)
-        bnez tos, 2f
+        bne tos, zero, 2f
         addi dp, dp, 2*cell
         sc x13, cell(dp)
         sc x14, 0(dp)
@@ -468,7 +468,7 @@ _find_all:
         j 2f
 1:      li x15, state
         lc x15, 0(x15)
-        beqz x15, 3b
+        beq x15, zero, 3b
         push_tos
         li x15, flash_latest
         lc tos, 0(x15)
@@ -489,7 +489,7 @@ _to_xt: push ra
         addi tos, tos, 5 + cell
         add tos, tos, x15
         andi x15, tos, 3
-        beqz 1f
+        beq x15, zero, 1f
         ori tos, tos, 3
         addi tos, tos, 1
 1:      pop ra
@@ -502,7 +502,7 @@ _abort: call _stack_base
         lc dp, 0(tos)
         li x15, word_reset_hook
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         jalr ra, x15
 1:      call _bel
         call _nak
@@ -541,7 +541,7 @@ _prepare_prompt:
 _quit_refill:
         li x15, refill_hook
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         jr x15
 1:      ret
         end_inlined
@@ -561,7 +561,7 @@ _quit_reset:
         lc dp, 0(tos)
         li x15, word_reset_hook
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         jalr ra, x15
 1:      j _quit
         ret # Dummy instruction
@@ -607,7 +607,7 @@ _quit:  call _rstack_base
 _quit_error:
         push ra
         call _display_red
-        beqz tos, 1f
+        beq tos, zero, 1f
         call _try
 1:      pull_tos
         call _display_normal
@@ -621,7 +621,7 @@ _display_red:
         push ra
         li x15, =color_enabled
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
 	string "\x1B[31;1m"
         call_type
 1:      pop ra
@@ -634,7 +634,7 @@ _display_normal:
         push ra
         li x15, =color_enabled
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
 	string "\x1B[0m"
         call_type
 1:      pop ra
@@ -663,7 +663,7 @@ _outer: push ra
         li x15, eval_eof
         lc x15, 0(x15)
         jalr ra, x15
-        bnez tos, 2f
+        bne tos, zero, 2f
         pull_tos
         call _refill
         j 1b
@@ -677,7 +677,7 @@ _outer: push ra
 _display_entry_space:
         li x15, prompt_disabled
         lc x15, 0(x15)
-        bnez 1f
+        bnez x15, zero, 1f
         j _space
 1:      ret
         end_inlined
@@ -687,10 +687,10 @@ _display_entry_space:
 _display_prompt:
         li x15, prompt_disabled
         lc x15, 0(x15)
-        bnez 1f
+        bnez x15, zero, 1f
         li x15, prompt_hook
         lc x15, 0(x15)
-        bnez 1f
+        bnez x15, zero, 1f
         jr x15
 1:      ret
         end_inlined
@@ -701,7 +701,7 @@ _interpret_line:
         push ra
 1:      call _validate
         call _token
-        beqz tos, 2f
+        beq tos, zero, 2f
         mv x15, tos
         lc x14, 0(dp)
         addi sp, sp, -2*cell
@@ -709,9 +709,9 @@ _interpret_line:
         scsp x14, cell(sp)
         li x13, parse_hook
         lc x13, 0(x13)
-        beqz x13, 5f
+        beq x13, zero, 5f
         jalr ra, x13
-        beqz tos, 3f
+        beq tos, zero, 3f
         lcsp x14, cell(sp)
         lcsp x15, 0(sp)
         addi sp, sp, 2*cell
@@ -725,13 +725,13 @@ _interpret_line:
         lcsp x14, cell(sp)
         lcsp x15, 0(sp)
         addi sp, sp, 2*cell
-        beqz tos, 3f
+        beq tos, zero, 3f
         li x15, state
         lc x15, 0(x15)
-        bnez x15, 4f
+        bne x15, zero, 4f
         lbu x15, 0(tos)
         andi x14, x15, compiled_flag
-        bnez x14, 5f
+        bne x14, zero, 5f
 6:      call _to_xt
         call _execute
         j 1b
@@ -742,11 +742,11 @@ _interpret_line:
         j 1b
 4:      lbu x15, 0(tos)
         andi x14, x15, immediate_flag
-        bnez x14, 6b
+        bne x14, zero, 6b
         andi x14, x15, inlined_flag
-        bnez x14, 7f
+        bne x14, zero, 7f
         andi x14, x15, fold_flag
-        bnez x14, 8f
+        bne x14, zero, 8f
         call _to_xt
         call _asm_call
         j 1b
@@ -805,7 +805,7 @@ _validate:
         call _raise
 1:      li x15, validate_dict_hook
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         jalr ra, x15
 1:      pop ra
         ret
@@ -872,7 +872,7 @@ _parse_literal:
         addi dp, dp, 2*cell
         li x13, handle_number_hook
         lc x13, 0(x13)
-        beqz x13, 1f
+        beq x13, zero, 1f
         scsp x15, 1*cell(sp)
         scsp x14, 2*cell(sp)
         addi dp, dp -2*cell
@@ -882,12 +882,12 @@ _parse_literal:
         jalr ra, x13
         lcsp x14, 2*cell(sp)
         lcsp x15, 1*cell(sp)
-        beqz tos, 1f
+        beq tos, zero, 1f
         pull_tos
         j 2f
 1:      li x13, failed_parse_hook
         lc x13, 0(x13)
-        beqz x13, 2f
+        beq x13, zero, 2f
         addi dp, dp, -2*cell
         sc tos, cell(dp)
         sc x14, 0(dp)
@@ -903,7 +903,7 @@ _parse_literal:
 _refill:
         li x15, eval_refill
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         jr x15
 1:      ret
 	end_inlined
@@ -912,7 +912,7 @@ _refill:
 	define_word "xon", visible_flag
 _xon:   li x15, xon_xoff_enabled
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         push_tos
         li tos, 0x11
         j _emit
@@ -923,7 +923,7 @@ _xon:   li x15, xon_xoff_enabled
 	define_word "xoff", visible_flag
 _xoff:	li x15, xon_xoff_enabled
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         push_tos
         li tos, 0x13
         j _emit
@@ -934,7 +934,7 @@ _xoff:	li x15, xon_xoff_enabled
 	define_word "ack", visible_flag
 _ack:	li x15, ack_nak_enabled
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         push_tos
         li tos, 0x06
         j _emit
@@ -945,7 +945,7 @@ _ack:	li x15, ack_nak_enabled
 	define_word "nak", visible_flag
 _nak:	li x15, ack_nak_enabled
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         push_tos
         li tos, 0x15
         j _emit
@@ -956,7 +956,7 @@ _nak:	li x15, ack_nak_enabled
 	define_word "bel", visible_flag
 _bel:	li x15, bel_enabled
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         push_tos
         li tos, 0x07
         j _emit
@@ -1022,14 +1022,14 @@ _do_refill:
         addi x15, x15, -1
         lbu x13, 0(x15)
         andi x12, x13, 0x80
-        beqz x12, 1b
+        beq x12, zero, 1b
         mv x12, x15
         addi x12, x12, -1
         li x13, input_buffer
         beq x12, x13, 1b
         lbu x13, 0(x12)
         andi x12, x13, 0x80
-        bnez x12, 4b
+        bne x12, zero, 4b
         j 1b
 3:      pull_tos
 2:      li x13, input_buffer
@@ -1078,11 +1078,11 @@ _failed_parse:
 _do_handle_number:
         push ra
         call _parse_integer
-        beqz tos, 2f
+        beq tos, zero, 2f
         pull_tos
         li x15, state
         lc x15, 0(x15)
-        beqz x15, 1f
+        beq x15, zero, 1f
         call _comma_lit
 1:      push_tos
         li tos, true_value
@@ -1109,7 +1109,7 @@ _parse_unsigned:
 	push ra
 	call _parse_base
         lc x15, 0(dp)
-        beqz x15, 1f
+        beq x15, zero, 1f
 	call _parse_unsigned_core
         j 2f
 1:	pull_tos
@@ -1123,7 +1123,7 @@ _parse_unsigned:
 	define_word "parse-base", visible_flag
 _parse_base:
         push ra
-        beqz tos, 5f
+        beq tos, zero, 5f
         mv x15, tos
         pull_tos
         lbu x14, 0(tos)
@@ -1164,7 +1164,7 @@ _parse_integer_core:
         push ra
         mv x13, tos
         pull_tos
-        beqz tos, 3f
+        beq tos, zero, 3f
         mv x15, tos
         pull_tos
         lbu x14, 0(tos)
@@ -1183,7 +1183,7 @@ _parse_integer_core:
         sc x15, 0(dp)
         mv tos, x13
         call _parse_unsigned_core
-        beqz tos, 2f
+        beq tos, zero, 2f
         sc x15, 0(dp)
         not x15, x15
         addi x15, x15, 1
@@ -1206,7 +1206,7 @@ _parse_unsigned_core:
         lc x13, 1*cell(dp)
         lc tos, 0(dp)
         li x12, 0
-1:      beqz x14, 3f
+1:      beq x14, zero, 3f
         push_tos
         lbu tos, 0(x13)
         addi x14, x14, -1
@@ -1226,7 +1226,7 @@ _parse_unsigned_core:
         lcsp x13, 3*cell(sp)
         lcsp x14, 2*cell(sp)
         lcsp x15, 1*cell(sp)
-        beqz tos, 2f
+        beq tos, zero, 2f
         pull_tos
         add x12, x12, tos
         pull_tos
@@ -1282,7 +1282,7 @@ _parse_digit:
 	define_word ":", visible_flag
 _colon: push ra
         call _token
-        beqz tos, 1f
+        beq tos, zero, 1f
         li x15, state
         li x14, true_value
         sc x14, 0(x15)
@@ -1326,7 +1326,7 @@ _colon_noname:
 _semi:  push ra
         li x15, =state
         lc x14, 0(x15)
-        beqz x14, 1f
+        beq x14, zero, 1f
         li x14, 0
         sc x14, 0(x15)
         call _asm_end
@@ -1343,7 +1343,7 @@ _semi:  push ra
 _constant_cell:
         push ra
         call _token
-        beqz tos, 1f
+        beq tos, zero, 1f
         call _asm_start
         li x15, current_flags
         li x14, visible_flag | inlined_flag
@@ -1387,7 +1387,7 @@ _constant_with_name_cell:
 _constant_double:
         push ra
         call _token
-        beqz tos, 1f
+        beq tos, zero, 1f
         call _asm_start
         li x15, current_flags
         li x14, visible_flag | inlined_flag

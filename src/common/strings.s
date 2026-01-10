@@ -1,24 +1,24 @@
-@ Copyright (c) 2020-2024 Travis Bemann
-@
-@ Permission is hereby granted, free of charge, to any person obtaining a copy
-@ of this software and associated documentation files (the "Software"), to deal
-@ in the Software without restriction, including without limitation the rights
-@ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-@ copies of the Software, and to permit persons to whom the Software is
-@ furnished to do so, subject to the following conditions:
-@ 
-@ The above copyright notice and this permission notice shall be included in
-@ all copies or substantial portions of the Software.
-@ 
-@ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-@ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-@ SOFTWARE.
+# Copyright (c) 2020-2026 Travis Bemann
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+# 
+# The above copyright notice and this permission notice shall be included in
+# all copies or substantial portions of the Software.
+# 
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
 
-	@@ Advance one character if possible
+	## Advance one character if possible
 	define_word "advance-once", visible_flag
 _advance_once:
 	ldr r0, =eval_index_ptr
@@ -34,7 +34,7 @@ _advance_once:
 1:	bx lr
 	end_inlined
 	
-	@@ Skip to the start of a token
+	## Skip to the start of a token
 	define_internal_word "skip-to-token", visible_flag
 _skip_to_token:
 	push {lr}
@@ -46,7 +46,7 @@ _skip_to_token:
 	pop {pc}
 	end_inlined
 	
-	@@ Parse to a character in the input stream
+	## Parse to a character in the input stream
 	define_internal_word "parse-to-char", visible_flag
 _parse_to_char:
 	movs r0, tos
@@ -85,7 +85,7 @@ _parse_to_char:
 3:      str r1, [r0]
         bx lr
 
-	@@ Immediately type a string in the input stream
+	## Immediately type a string in the input stream
 	define_word ".(", visible_flag | immediate_flag
 _type_to_paren:
 	push {lr}
@@ -96,7 +96,7 @@ _type_to_paren:
 	pop {pc}
 	end_inlined
 
-	@@ Print a string immediately
+	## Print a string immediately
 	define_word ".\"", visible_flag | immediate_flag | compiled_flag
 _type_compiled:
 	push {lr}
@@ -107,7 +107,7 @@ _type_compiled:
 	pop {pc}
 	end_inlined
 	
-	@@ Compile a non-counted string
+	## Compile a non-counted string
 	define_word "s\"", visible_flag | immediate_flag | compiled_flag
 _compile_imm_string:
 	push {lr}
@@ -118,7 +118,7 @@ _compile_imm_string:
 	pop {pc}
 	end_inlined
 
-	@@ Compile a counted-string
+	## Compile a counted-string
 	define_word "c\"", visible_flag | immediate_flag | compiled_flag
 _compile_imm_cstring:
 	push {lr}
@@ -129,7 +129,7 @@ _compile_imm_cstring:
 	pop {pc}
 	end_inlined
 
-	@@ Compile a counted-string
+	## Compile a counted-string
 	define_word "compile-cstring", visible_flag
 _compile_cstring:
 	push {lr}
@@ -155,7 +155,7 @@ _compile_cstring:
 	push {r0, r1}
 	bl _asm_branch
         push_tos
-        ldr tos, =0xBF00 @@ NOP
+        ldr tos, =0xBF00 ## NOP
         bl _current_comma_2
         push_tos
         ldr tos, =start_string
