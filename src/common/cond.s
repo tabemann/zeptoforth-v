@@ -89,8 +89,11 @@ _else:	addi sp, sp, -2*cell
 	call _asm_reserve_branch
 	call _current_here
         lcsp x15, cell(sp)
-	push_tos
-	mv tos, x15
+	addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li tos, 15 # x15
+        sc tos, 0(dp)
+        mv tos, x15
 	call _asm_branch_zero_back
         call _begin_block
 	push_tos
@@ -138,6 +141,9 @@ _then:	addi sp, sp, -3*cell
 	push_tos
         li tos, x15
         beq x14, zero, 1f
+        push_tos
+        li tos, 15 # x15
+        call _swap
 	call _asm_branch_zero_back
         j 2f
 1:	call _asm_branch_back
@@ -173,6 +179,7 @@ addi sp, sp, -3*cell
         beq x14, zero, 1f
         push_tos
         li tos, 15 # x15
+        call _swap
 	call _asm_branch_zero_back
         j 2f
 1:	call _asm_branch_back
@@ -238,9 +245,9 @@ _repeat:
         call _current_here
         addi dp, dp, -2*cell
         sc tos, cell(dp)
-        lcsp tos, cell(sp)
-        sc tos, 0(dp)
         li tos, 15 # x15
+        sc tos, 0(dp)
+        lcsp tos, cell(sp)
         call _asm_branch_zero_back
         lcsp ra, 0(sp)
         addi sp, sp, 2*cell
