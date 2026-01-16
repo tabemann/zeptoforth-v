@@ -78,10 +78,21 @@ _asm_transform_c_j_imm:
         ret
         end_inlined
 
+        ## Compile a c.jr instruction
+        ## ( reg -- )
+        define_internal_word "c.jr,", visible_flag
+_asm_c_jr:
+        slli tos, tos, 7
+        li x15, 0x8002
+        or tos, tos, x15
+        call _current_comma_2
+        ret
+        end_inlined
+
         ## Compile a c.j instruction -- imm is a PC relative offset, lowest
         ## bit is ignored.
         ## ( imm -- )
-        define_internal_word "c.j," visible_flag
+        define_internal_word "c.j,", visible_flag
 _asm_c_j:
         push ra
         call _asm_transform_c_j_imm
@@ -134,6 +145,18 @@ _asm_build_jal:
         ret
         end_inlined
 
+        ## Compile a jal instruction -- imm is a PC relative offset, lowest bit
+        ## is ignored
+        ## ( imm reg -- )
+        define_internal_word "jal,", visible_flag
+_asm_jal:
+        push ra
+        call _asm_build_jal
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
+        
         ## Build a c.beqz reg, offset instruction
         ## ( offset reg -- instr )
         define_internal_word "build-c.beqz", visible_flag
@@ -169,6 +192,17 @@ _asm_build_c_beqz:
         ret
         end_inlined
 
+        ## Compile a c.beqz reg, offset instruction
+        ## ( offset reg -- instr )
+        define_internal_word "c.beqz,", visible_flag
+_asm_c_beqz:
+        push ra
+        call _asm_build_c_beqz
+        call _current_comma_2
+        pop ra
+        ret
+        end_inlined
+        
         ## Build a beq reg, zero, offset instruction
         ## ( offset reg -- instr )
         define_internal_word "build-beq-zero", visible_flag
@@ -195,6 +229,17 @@ _asm_build_beq_zero:
         ori tos, tos, 0x63
         ret
         end_inlined
+
+        ## Compile a beq reg, zero, offset instruction
+        ## ( offset reg -- )
+        define_internal_word "beq-zero,", visible_flag
+_asm_beq_zero:
+        push ra
+        call _asm_build_beq_zero
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
         
         ## Compile a mv instruction
         ## ( src-reg dest-reg -- )
@@ -215,7 +260,7 @@ _asm_mv:
 
         ## Compile an addi instruction
         ## ( imm rs1 rd -- instr )
-        define_internal_word "build-addi" visible_flag
+        define_internal_word "build-addi", visible_flag
 _asm_build_addi:
         lc x15, 0(dp)
         lc x14, cell(dp)
@@ -230,10 +275,21 @@ _asm_build_addi:
         ret
         end_inlined
 
-        ## Compile a lui instruction -- note that the lower 12 bits of imm
+        ## Compile an addi instruction
+        ## ( imm rs1 rd -- )
+        define_internal_word "addi,", visible_flag
+_asm_addi:
+        push ra
+        call _asm_build_addi
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
+
+        ## Build a lui instruction -- note that the lower 12 bits of imm
         ## are ignored.
         ## ( imm rd -- instr )
-        define_internal_word "build-lui" visible_flag
+        define_internal_word "build-lui", visible_flag
 _asm_build_lui:
         lc x15, 0(dp)
         addi dp, dp, cell
@@ -242,6 +298,18 @@ _asm_build_lui:
         and x15, x15, x14
         or tos, tos, x15
         ori tos, tos, 0x37
+        ret
+        end_inlined
+
+        ## Compile a lui instruction -- note that the lower 12 bits of imm
+        ## are ignored.
+        ## ( imm rd -- )
+        define_internal_word "lui,", visible_flag
+_asm_lui:
+        push ra
+        call _asm_build_lui
+        call _current_comma_4
+        pop ra
         ret
         end_inlined
 
@@ -349,8 +417,7 @@ _asm_literal:
         call _asm_c_lui
         j 3f
 2:      call _2dup
-        call _asm_build_lui
-        call _current_comma_4
+        call _asm_lui
 3:      lc x15, 0(dp)
         slli x15, x15, cell_bits - 12
         srai x15, x15, cell_bits - 12
@@ -363,8 +430,7 @@ _asm_literal:
         call _asm_c_addi
         j 6f
 5:      push_tos
-        call _asm_build_addi
-        call _current_comma_4
+        call _asm_addi
 6:      pop ra
         ret
         end_inlined
@@ -831,9 +897,7 @@ _asm_branch_zero:
         li x15, 0xFF
         blt x15, tos, 2f
         call _swap
-        call _asm_to_c_reg
-        call _asm_build_c_beqz
-        call _current_comma_2
+        call _asm_c_beqz
         j 3f
 1:      pull_tos
         lc x15, cell(dp)
@@ -843,8 +907,7 @@ _asm_branch_zero:
         li x15, 0xFFF
         blt x15, tos, 4f
         call _swap
-        call _asm_build_beq_zero
-        call _current_comma_4
+        call _asm_beq_zero
 3:      pull_tos
         pop ra
         ret
@@ -1625,8 +1688,40 @@ _asm_do_inline:
 	end_inlined
 
 	## Call a word at an address
+        ## ( addr -- )
 	define_internal_word "call,", visible_flag
-_asm_call:	
+_asm_call:
+        push ra
+        call _asm_undefer_lit
+        li x15, -1
+        li x14, suppress_inline
+        sc x15, 0(x14)
+        call _current_here
+        lc x15, 0(dp)
+        sub tos, x15, tos
+        li x14, -0x800
+        blt tos, x14, 1f
+        li x14, 0x7FF
+        blt x14, tos, 1f
+        call _asm_c_jal
+        j 3f
+1:      li x14, -0x100000
+        blt tos, x14, 2f
+        li x14, 0xFFFFF
+        blt x14, tos 2f
+        call _asm_jal
+        j 3f
+2:      li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        li tos, 15 # x15
+        call _asm_c_jr
+        j 4f
+3:      pull_tos
+4:      pop ra
+        ret
+        end_inlined
+        
 	push {lr}
 	bl _asm_undefer_lit
 	movs r0, #-1
@@ -1657,29 +1752,29 @@ _asm_call:
 	end_inlined
 	
 	## Undefer a literal
+        ## ( -- )
 	define_word "undefer-lit", visible_flag
 _asm_undefer_lit:
-	push {lr}
-	ldr r1, =literal_deferred_q
-	ldr r0, [r1]
-	cmp r0, #0
-	beq 1f
-	push_tos
-	movs tos, #6
-	push {r1}
-	bl _asm_push
-	push_tos
-	ldr r0, =deferred_literal
-	ldr tos, [r0]
-	push_tos
-	movs tos, #6
-	bl _asm_literal
-	pop {r1}
-	movs r0, #0
-	str r0, [r1]
-1:	pop {pc}
-	end_inlined
-
+        push ra
+        li x14, literal_deferred_q
+        lc x15, 0(x14)
+        beq x15, zero, 1f
+        mv x15, zero
+        sc x15, 0(x14)
+        push_tos
+        li tos, 8 # TOS
+        call _asm_push
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li x15, deferred_literal
+        lc tos, 0(x15)
+        sc tos, 0(dp)
+        li tos, 8 # TOS
+        call _asm_literal
+1:      pop ra
+        ret
+        end_inlined
+        
 	## Reserve space for a literal
         ## ( -- addr )
 	define_internal_word "reserve-literal", visible_flag
