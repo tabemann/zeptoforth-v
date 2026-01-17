@@ -270,8 +270,7 @@ _asm_build_addi:
         or tos, tos, x15
         slli x14, x14, 20
         or tos, tos, x14
-        li x15, 0x13 # ADDI
-        or tos, tos, x15
+        ori tos, tos, 0x13
         ret
         end_inlined
 
@@ -448,7 +447,7 @@ _asm_exit:
         sc tos, 2*cell(dp)
         li tos, (4 << 13) | (1 << 7) | (2 << 0) # c.jr ra
         sc tos, 1*cell(dp)
-        li tos, (0 << 13) | (2 << 7) | (4 << 2) | (1 << 0) # c.addi sp, sp, 4
+        li tos, (0 << 13) | (2 << 7) | (cell << 2) | (1 << 0) # c.addi sp, sp, cell
         sc tos, 0(dp)
         li tos, (2 << 13) | (1 << 7) | (2 << 0) # c.lwsp ra, 0(sp)
         call _current_comma_2
@@ -469,7 +468,7 @@ _asm_push:
         push ra
         push_tos
         # c.addi dp, dp, -cell
-        li tos, (1 << 12) | (8 << 7) | ((-4 & 0x1F) << 2) | (1 << 0)
+        li tos, (1 << 12) | (9 << 7) | ((-cell & 0x1F) << 2) | (1 << 0)
         call _current_comma_2
         call _dup
         call _asm_q_c_reg
@@ -477,14 +476,14 @@ _asm_push:
         pull_tos
         call _asm_to_c_reg
         slli tos, tos, 2
-        li x15, (6 << 13) | ((8 - 8) << 7) # c.sw reg, 0(dp)
+        li x15, (6 << 13) | ((9 - 8) << 7) # c.sw reg, 0(dp)
         or tos, tos, x15
         call _current_comma_2
         pop ra
         ret
 1:      pull_tos
         slli tos, tos, 20
-        li x15, (8 << 15) | (2 << 12) | (0x23 << 0) # sw reg, 0(dp)
+        li x15, (9 << 15) | (2 << 12) | (0x23 << 0) # sw reg, 0(dp)
         or tos, tos, x15
         call _current_comma_4
         pop ra
@@ -494,11 +493,11 @@ _asm_push:
         ## Compile:
         ##
         ## (c.)lw reg, 0(dp)
-        ## c.addi dp, dp, -cell
+        ## c.addi dp, dp, cell
         ##
         ## ( reg -- )
         define_internal_word "push,", visible_flag
-_asm_push:
+_asm_pull:
         push ra
         call _dup
         call _asm_q_c_reg
@@ -506,349 +505,292 @@ _asm_push:
         pull_tos
         call _asm_to_c_reg
         slli tos, tos, 2
-        li x15, (2 << 13) | ((8 - 8) << 7) # c.lw reg, 0(dp)
+        li x15, (2 << 13) | ((9 - 8) << 7) # c.lw reg, 0(dp)
         or tos, tos, x15
         call _current_comma_2
         j 2f
 1:      pull_tos
         slli tos, tos, 7
-        li x15, (8 << 15) | (2 << 12) | (0x03 << 0) # lw reg, 0(dp)
+        li x15, (9 << 15) | (2 << 12) | (0x03 << 0) # lw reg, 0(dp)
         or tos, tos, x15
         call _current_comma_4
 2       push_tos
-        li tos, (8 << 7) | (4 << 2) | (1 << 0) # c.addi dp, dp, cell
+        li tos, (9 << 7) | (cell << 2) | (1 << 0) # c.addi dp, dp, cell
         call _current_comma_2
 
         end_inlined
         
 	## Compile the header of a word
+        ## ( c-addr u -- )
 	define_internal_word "start-compile-header", visible_flag
 _asm_start_header:
-	push {lr}
-	bl _asm_undefer_lit
+        push ra
+        call _asm_undefer_lit
         push_tos
-        movs tos, #syntax_word
-        bl _push_syntax
-	movs r0, #0
-	ldr r1, =suppress_inline
-	str r0, [r1]
-	push_tos
-	movs tos, #4
-	bl _current_comma_align
-	bl _current_here
-	ldr r0, =current_compile
-	str tos, [r0]
-	ldr r0, =current_flags
-	movs r1, #0
-	str r1, [r0]
-	movs tos, #2
-	bl _current_allot
-	bl _get_current
-	bl _current_comma_2
-	bl _asm_link
-	bl _current_comma_cstring
-	bl _current_here
-	movs r0, #1
-	tst tos, r0
-	beq 1f
-	movs tos, #0
-	bl _current_comma_1
-        bl _current_here
-1:      ldr r0, =current_unit_start
-        str tos, [r0]
+        li tos, syntax_word
+        call _push_syntax
+        li x15, false_value
+        li x14, suppress_inline
+        sc x15, 0(x14)
+        push_tos
+        li tos, cell
+        call _current_comma_align
+        call _current_here
+        li x15, current_compile
+        sc tos, 0(x15)
+        li x15, current_flags
+        li x14, 0
+        sc x14, 0(x15)
+        li tos, 2
+        call _current_allot
+        call _get_current
+        call _current_comma_2
+        call _asm_link
+        call _current_comma_cstring
+        call _current_here
+        andi x15, tos, 1
+        beq x15, zero, 1f
+        li tos, 0
+        call _current_comma_1
+        call _current_here
+1:      li x15, current_unit_start
+        sc tos, 0(x15)
         pull_tos
-        pop {pc}
-	end_inlined
+        pop ra
+        ret
+        end_inlined
 
-	## Compile the start of a word without the push {lr}
+	## Compile the start of a word without the push ra
         define_internal_word "start-compile-no-push", visible_flag
 _asm_start_no_push:
-        push {lr}
-	bl _asm_start_header
-        ldr r0, =word_begin_hook
-        ldr r0, [r0]
-        cmp r0, #0
-        beq 1f
-        movs r1, #1
-        orrs r0, r1
-        blx r0
-1:      pop {pc}
+        push ra
+        call _asm_start_header
+        li x15, word_begin_hook
+        lc x15, 0(x15)
+        beq x15, zero, 1f
+        jalr ra, x15
+1:      pop ra
+        ret
         end_inlined
 
 	## Compile the start of a word
 	define_internal_word "start-compile", visible_flag
 _asm_start:
-	push {lr}
-	bl _asm_start_header
-	push_tos
-	ldr tos, =0xB500	## push {lr}
-	bl _current_comma_2
-        ldr r0, =word_begin_hook
-        ldr r0, [r0]
-        cmp r0, #0
-        beq 1f
-        movs r1, #1
-        orrs r0, r1
-        blx r0
-1:      pop {pc}
+        push ra
+        call _asm_start_header
+        # These instructions are loaded onto the stack in reverse order
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        # c.swsp ra, 0(sp)
+        li tos, (6 << 13) | (1 << 2) | (2 << 0)
+        sc tos, 0(dp)
+        # c.addi sp, sp, -cell
+        li tos, (0 << 13) | (1 << 12) | (1 << 7) | ((-cell & 0x1F) << 2) | (1 << 0)
+        call _current_comma_2
+        call _current_comma_2
+        li x15, word_begin_hook
+        lc x15, 0(x15)
+        beq x15, zero, 1f
+        jalr ra, x15
+1:      pop ra
+        ret
 	end_inlined
 
 	## Compile a link field
 	define_internal_word "current-link,", visible_flag
 _asm_link:
-	push {lr}
-	push_tos
-	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	beq 1f
-	ldr r0, =flash_latest
-	b 2f
-1:	ldr r0, =ram_latest
-2:	ldr tos, [r0]
-	bl _current_comma_4
-	pop {pc}
-	end_inlined
+        push ra
+        push_tos
+        li x15, compiling_to_flash
+        lc x15, 0(x15)
+        beq x15, zero, 1f
+        li x15, flash_latest
+        j 2f
+1:      li x15, ram_latest
+2:      lc tos, 0(x15)
+        call _current_comma_cell
+        pop ra
+        ret
+        end_inlined
 
 	## Finalize the compilation of a word
 	define_internal_word "finalize,", visible_flag
 _asm_finalize:
-	push {lr}
-	bl _asm_undefer_lit
+        push ra
+        call _asm_undefer_lit
         push_tos
-        movs tos, #syntax_word
-        bl _verify_syntax
-        bl _drop_syntax
-	bl _asm_word_align
-	push_tos
-	ldr tos, =current_flags
-	ldr tos, [tos]
-	ldr r0, =suppress_inline
-	ldr r0, [r0]
-	ldr r1, =inlined_flag
-	ands r0, r1
-	bics tos, r0
-	ldr r0, =current_flags
-	str tos, [r0]
-	push_tos
-	ldr tos, =current_compile
-	ldr tos, [tos]
-	bl _store_current_1
-1:	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	beq 1f
-	ldr r0, =compress_flash_enabled
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 3f
-	push_tos
-	ldr r0, =current_compile
-	ldr tos, [r0]
-	bl _current_comma_4
-	push_tos
-	ldr tos, =0xDEADBEEF
-	bl _current_comma_4
-	bl _flash_block_align
-3:	ldr r0, =current_compile
-	ldr r1, [r0]
-	ldr r2, =flash_latest
-	str r1, [r2]
-	b 2f
-1:	ldr r0, =current_compile
-	ldr r1, [r0]
-	ldr r2, =ram_latest
-	str r1, [r2]
-2:	ldr r2, =latest
-	str r1, [r2]
-	movs r1, #0
-	str r1, [r0]
+        li tos, syntax_word
+        call _verify_syntax
+        call _drop_syntax
+        call _asm_word_align
         push_tos
-        ldr tos, =finalize_hook
-	ldr tos, [tos]
-	bl _execute_nz
-        ldr r0, =current_unit_start
-        movs r1, #0
-        str r1, [r0]
-	pop {pc}
-	end_inlined
+        li tos, current_flags
+        lc tos, 0(tos)
+        li x15, suppress_inline
+        lc x15, 0(x15)
+        andi x15, x15, inlined_flag
+        andn tos, tos, x15
+        lc x15, current_flags
+        sc tos, 0(x15)
+        push_tos
+        li tos, current_compile
+        lc tos, 0(tos)
+        call _store_current_1
+1:      li x15, compiling_to_flash
+        lc x15, 0(x15)
+        beq x15, zero, 1f
+        li x15, compress_flash_enabled
+        lc x15, 0(x15)
+        bne x15, zero, 3f
+        push_tos
+        li x15, current_compile
+        lc tos, 0(x15)
+        call _current_comma_cell
+        push_tos
+        li tos, 0xDEADBEEF
+        call _current_comma_4
+        call _flash_block_align
+3:      li x15, current_compile
+        lc x14, 0(x15)
+        li x13, flash_latest
+        sc x14, 0(x13)
+        j 2f
+1:      li x15, current_compile
+        lc x14, 0(x15)
+        li x13, ram_latest
+        sc x14, 0(x13)
+2:      li x13, latest
+        sc x14, 0(x13)
+        li x14, 0
+        sc x14, 0(x15)
+        li x15, finalize_hook
+        lc x15, 0(x15)
+        beq x15, zero, 1f
+        jalr ra, x15
+1:      li x15, current_unit_start
+        li x14, 0
+        sc x15, 0(x15)
+        pop ra
+        ret
+        end_inlined
 	
 	## Finalize the compilation of a word without aligning
 	define_internal_word "finalize-no-align,", visible_flag
 _asm_finalize_no_align:
-	push {lr}
-	bl _asm_undefer_lit
+        push ra
+        call _asm_undefer_lit
         push_tos
-        movs tos, #syntax_word
-        bl _verify_syntax
-        bl _drop_syntax
-	bl _asm_word_align
-	push_tos
-	ldr tos, =current_flags
-	ldr tos, [tos]
-	ldr r0, =suppress_inline
-	ldr r0, [r0]
-	ldr r1, =inlined_flag
-	ands r0, r1
-	bics tos, r0
-	ldr r0, =current_flags
-	str tos, [r0]
-	push_tos
-	ldr tos, =current_compile
-	ldr tos, [tos]
-	bl _store_current_1
-1:	ldr r0, =compiling_to_flash
-	ldr r0, [r0]
-	cmp r0, #0
-	beq 1f
-	ldr r0, =compress_flash_enabled
-	ldr r0, [r0]
-	cmp r0, #0
-	bne 3f
-	push_tos
-	ldr r0, =current_compile
-	ldr tos, [r0]
-	bl _current_comma_4
-	push_tos
-	ldr tos, =0xDEADBEEF
-	bl _current_comma_4
-3:	ldr r0, =current_compile
-	ldr r1, [r0]
-	ldr r2, =flash_latest
-	str r1, [r2]
-	b 2f
-1:	ldr r0, =current_compile
-	ldr r1, [r0]
-	ldr r2, =ram_latest
-	str r1, [r2]
-2:	ldr r2, =latest
-	str r1, [r2]
-	movs r1, #0
-	str r1, [r0]
+        li tos, syntax_word
+        call _verify_syntax
+        call _drop_syntax
+        call _asm_word_align
         push_tos
-	ldr tos, =finalize_hook
-	ldr tos, [tos]
-	bl _execute_nz
-        ldr r0, =current_unit_start
-        movs r1, #0
-        str r1, [r0]
-	pop {pc}
-	end_inlined
+        li tos, current_flags
+        lc tos, 0(tos)
+        li x15, suppress_inline
+        lc x15, 0(x15)
+        andi x15, x15, inlined_flag
+        andn tos, tos, x15
+        lc x15, current_flags
+        sc tos, 0(x15)
+        push_tos
+        li tos, current_compile
+        lc tos, 0(tos)
+        call _store_current_1
+1:      li x15, compiling_to_flash
+        lc x15, 0(x15)
+        beq x15, zero, 1f
+        li x15, compress_flash_enabled
+        lc x15, 0(x15)
+        bne x15, zero, 3f
+        push_tos
+        li x15, current_compile
+        lc tos, 0(x15)
+        call _current_comma_cell
+        push_tos
+        li tos, 0xDEADBEEF
+        call _current_comma_4
+3:      li x15, current_compile
+        lc x14, 0(x15)
+        li x13, flash_latest
+        sc x14, 0(x13)
+        j 2f
+1:      li x15, current_compile
+        lc x14, 0(x15)
+        li x13, ram_latest
+        sc x14, 0(x13)
+2:      li x13, latest
+        sc x14, 0(x13)
+        li x14, 0
+        sc x14, 0(x15)
+        li x15, finalize_hook
+        lc x15, 0(x15)
+        beq x15, zero, 1f
+        jalr ra, x15
+1:      li x15, current_unit_start
+        li x14, 0
+        sc x15, 0(x15)
+        pop ra
+        ret
+        end_inlined
 
 	## Compile the end of a word
 	define_internal_word "end-compile,", visible_flag
 _asm_end:
-	push {lr}
-	bl _asm_undefer_lit
-        ldr r0, =word_exit_hook
-        ldr r0, [r0]
-        cmp r0, #0
-        beq 1f
-        movs r1, #1
-        orrs r0, r1
-        blx r0
-1:	ldr r0, =word_end_hook
-        ldr r0, [r0]
-        cmp r0, #0
-        beq 2f
-        movs r1, #1
-        orrs r0, r1
-        blx r0
-2:      bl _asm_undefer_lit
-	push_tos
-	ldr tos, =0xBD00	## pop {pc}
-	bl _current_comma_2
-	push_tos
-	ldr tos, =0x003F        ## movs r7, r7
-	bl _current_comma_2
-	bl _asm_finalize
-	pop {pc}
+        push ra
+        call _asm_undefer_lit
+        li x15, word_exit_hook
+        lc x15, 0(x15)
+        beq x15, zero, 1f
+        jalr ra, x15
+1:      li x15, word_end_hook
+        lc x15, 0(x15)
+        beq x15, zero 2f
+        jalr ra, x15
+2:      call _asm_undefer_lit
+        call _asm_exit
+	call _asm_finalize
+	pop ra
+        ret
 	end_inlined
 
 	## End flash compression
 	define_word "end-compress-flash", visible_flag
 _asm_end_compress_flash:
-	push {lr}
-	bl _asm_undefer_lit
-	ldr r0, =compress_flash_enabled
-	ldr r1, [r0]
-	cmp r1, #0
-	beq 1f
-	movs r1, #0
-	str r1, [r0]
-	bl _asm_word_align
-	push_tos
-	ldr r0, =flash_latest
-	ldr tos, [r0]
-	bl _flash_comma_4
-	push_tos
-	ldr tos, =0xDEADBEEF
-	bl _flash_comma_4
-	bl _flash_block_align
-1:	pop {pc}
-	end_inlined
+        push ra
+        call _asm_undefer_lit
+        li x15, compress_flash_enabled
+        lc x14, 0(x15)
+        beq x14, zero, 1f
+        li x14, false_value
+        sc x14, 0(x15)
+        call _asm_word_align
+        push_tos
+        li x15, flash_latest
+        lc tos, 0(x15)
+        call _flash_comma_4
+        push_tos
+        li tos, 0xDEADBEEF
+        call _flash_comma_4
+        call _flash_block_align
+1:      pop ra
+        ret
+        end_inlined
 
 	## Commit code to flash without finishing compressing it
 	define_word "commit-flash", visible_flag
 _asm_commit_flash:
-	push {lr}
-	bl _asm_undefer_lit
-	ldr r0, =compress_flash_enabled
-	ldr r1, [r0]
-	cmp r1, #0
-	beq 1f
-	bl _asm_word_align
-	bl _flash_block_align
-1:	pop {pc}
-	end_inlined
+        push ra
+        call _asm_undefer_lit
+        li x15, compress_flash_enabled
+        lc x14, 0(x15)
+        beq x14, zero, 1f
+        call _asm_word_align
+        call _flash_block_align
+1:      pop ra
+        ret
+        end_inlined
 
-	## Assemble a move immediate instruction
-	define_internal_word "mov-imm,", visible_flag
-_asm_mov_imm:
-	push {lr}
-	movs r0, tos
-	pull_tos
-	movs r1, #7
-	ands r0, r1
-	movs r1, #0xFF
-	ands tos, r1
-	lsls r0, r0, #8
-	orrs tos, r0
-	ldr r0, =0x2000
-	orrs tos, r0
-	bl _current_comma_2
-	pop {pc}
-	end_inlined
-
-	## Assemble an reverse subtract immediate from zero instruction
-	define_internal_word "neg,", visible_flag
-_asm_neg:
-	push {lr}
-	movs r0, tos
-	pull_tos
-	movs r1, #7
-	ands tos, r1
-	ands r0, r1
-	lsls tos, tos, #3
-	orrs tos, r0
-	ldr r0, =0x4240
-	orrs tos, r0
-	bl _current_comma_2
-	pop {pc}
-	end_inlined
-
-	## Compile a blx (register) instruction
-	define_internal_word "blx-reg,", visible_flag
-_asm_blx_reg:
-	push {lr}
-	movs r0, #0xF
-	ands tos, r0
-	lsls tos, tos, #3
-	ldr r0, =0x4780
-	orrs tos, r0
-	bl _current_comma_2
-	pop {pc}
-	end_inlined
 	
 	## Compile an unconditional branch
         ## ( branch-addr -- )
@@ -969,124 +911,137 @@ _asm_branch_zero_back:
 	end_inlined
 
 	## Extract the value of a constant
+        ## ( code-addr -- constant-value constant? )
 	define_internal_word "extract-constant", visible_flag
 _asm_extract_constant:
-	push {lr}
-	ldrh r0, [tos]
-	ldr r1, =0xB500
-	cmp r0, r1
-	beq 1f
-3:	movs tos, #0
-	push_tos
-	pop {pc}
-1:	adds tos, #2
-	ldrh r0, [tos]
-	ldr r1, =0xF847
-	cmp r0, r1
-	bne 3b
-	adds tos, #2
-	ldrh r0, [tos]
-	ldr r1, =0x6D04
-	cmp r0, r1
-	bne 3b
-	adds tos, #2
-	ldrh r0, [tos]
-	ldr r1, =0xFF00
-	movs r2, r0
-	ands r2, r1
-	ldr r1, =0x2600
-	cmp r2, r1
-	beq 2f
-	ldr r1, =0xFBF0
-	movs r2, r0
-	ands r2, r1
-	ldr r1, =0xF240
-	cmp r2, r1
-	bne 3b
-	movs r2, r0
-	movs r1, #0xF
-	ands r2, r1
-	lsrs r0, r0, #10
-	movs r1, #1
-	ands r0, r1
-	adds tos, #2
-	ldrh r3, [tos]
-	ldr r1, =0x8F00
-	movs r4, r3
-	ands r4, r1
-	ldr r1, =0x0600
-	cmp r4, r1
-	bne 3b
-	lsls r2, r2, #12
-	lsls r0, r0, #11
-	orrs r2, r0
-	ldr r1, =0x7000
-	movs r4, r3
-	ands r4, r1
-	lsrs r4, r4, #4
-	orrs r2, r4
-	ldr r1, =0x00FF
-	movs r4, r3
-	ands r4, r1
-	orrs r4, r2
-	adds tos, #2
-	ldrh r0, [tos]
-	ldr r1, =0xBD00
-	cmp r0, r1
-	beq 5f
-	ldr r1, =0xFBF0
-	movs r2, r0
-	ands r2, r1
-	ldr r1, =0xF2C0
-	cmp r2, r1
-	bne 3b
-	movs r2, r0
-	movs r1, #0xF
-	ands r2, r1
-	lsrs r0, r0, #10
-	movs r1, #1
-	ands r0, r1
-	adds tos, #2
-	ldrh r3, [tos]
-	ldr r1, =0x8F00
-	movs r5, r3
-	ands r5, r1
-	ldr r1, =0x0600
-	cmp r5, r1
-	bne 3b
-	lsls r2, r2, #12
-	lsls r0, r0, #11
-	orrs r2, r0
-	ldr r1, =0x7000
-	movs r5, r3
-	ands r5, r1
-	lsrs r5, r5, #4
-	orrs r2, r5
-	ldr r1, =0x00FF
-	movs r5, r3
-	ands r5, r1
-	orrs r5, r2
-	lsls r0, r5, #16
-	orrs r0, r4
-	b 4f
-2:	ldr r1, =0x00FF
-	ands r0, r1
-4:	adds tos, #2
-	ldrh r2, [tos]
-	ldr r1, =0xBD00
-	cmp r2, r1
-	bne 3b
-	movs tos, r0
-	push_tos
-	ldr tos, =-1
-	pop {pc}
-5:	movs tos, r4
-	push_tos
-	ldr tos, =-1
-	pop {pc}
-	end_inlined
+        push ra
+        lhu x15, 0(tos)
+        # Check for c.addi sp, sp, -cell
+        li x14, (0 << 13) | (1 << 12) | (1 << 7) | ((-cell & 0x1F) << 2) | (1 << 0)
+        bne x15, x14, 1f
+        lhu x15, 2(tos)
+        # Check for c.swsp ra, 0(sp)
+        li x14, (6 << 13) | (1 << 2) | (2 << 0)
+        bne x15, 114, 1f
+        addi tos, tos, 4
+        call _asm_do_extract_constant
+        call _rot
+        lhu x15, 0(tos)
+        # Check for c.lwsp ra, 0(sp)
+        li x14, (2 << 13) | (1 << 7) | (2 << 0)
+        bne x15, x14, 2f
+        lhu x15, 2(tos)
+        # Check for c.addi sp, sp, cell
+        li x14, (0 << 13) | (2 << 7) | (cell << 2) | (1 << 0)
+        bne x15, x14, 2f
+        lhu x15, 4(tos)
+        j 4f
+1:      call _asm_do_extract_constant
+        call _rot
+        lhu x15, 0(tos)
+        # Check for c.jr ra
+4:      li x14, (1 << 13) | (1 << 7) | (2 << 0)
+        bne x15, x14, 2f
+        pull_tos
+        j 3f
+2:      addi dp, dp, 2*cell
+        li tos, false_value
+        sc tos, 0(dp)
+3:      pop ra
+        ret
+        end_inlined
 
-	## This only folds words in M0
+        ## Core of extracting the value of a constant
+        ## ( code-addr -- code-addr' constant-value constant? )
+        define_internal_word "do-extract-constant", visible_flag
+_asm_do_extract_constant:       
+        lhu x15, 0(tos)
+        # Check for c.addi dp, dp, -cell
+        li x14, (1 << 12) | (9 << 7) | ((-cell & 0x1F) << 2) | (1 << 0)
+        bne x15, x14, 1f
+        lhu x15, 2(tos)
+        # Check for c.sw tos, 0(dp)
+        li x14, (6 << 13) | ((9 - 8) << 7) | ((8 - 8) << 2)
+        bne x15, x14, 1f
+        lhu x15, 4(tos)
+        # Check for c.li tos, imm
+        li x14, 0xEF83
+        and x14, x14, x15
+        li x13, (2 << 13) | (8 << 7) | (1 << 0)
+        bne x14, x13, 2f
+        srli x14, x15, 12
+        slli x14, x14, sign_shift
+        srai x14, x14, sign_shift - 5
+        srli x13, x15, 2
+        andi x13, x13, 0x1F
+        or x14, x14, x13
+        addi tos, tos, 6
+        j 3f
+1:      addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li tos, false_value
+        sc tos, 0(dp)
+        ret
+2:      # Check for c.lui tos, imm
+        li x14, 0xEF83
+        and x14, x14, x15
+        li x13, (3 << 13) | (8 << 7) | (1 << 0)
+        bne x14, x13, 2f
+        srli x14, x15, 12
+        slli x14, x14, sign_shift
+        srai x14, x14, sign_shift - 17
+        srli x13, x15, 2
+        andi x13, x13, 0x1F
+        slli x13, x13, 12
+        or x14, x14, x13
+        addi tos, tos, 6
+4:      lhu x15, 0(tos)
+        # Check for c.addi tos, tos, imm
+        li x13, 0xEF83
+        and x13, x13, x15
+        li x12, (0 << 13) | (8 << 7) | (1 << 0)
+        bne x13, x12, 5f
+        srli x12, x15, 12
+        slli x12, x12, sign_shift
+        srai x12, x12, sign_shift - 5
+        srli x11, x15, 2
+        andi x11, x11, 0x1F
+        or x12, x12, x11
+        j 6f
+2:      lhu x14, 6(tos)
+        slli x14, x14, 16
+        or x15, x15, x14
+        # Check for lui tos, imm
+        li x14, 0xFFF
+        and x14, x14, x15
+        li x13, (8 << 7) | (0x37 << 0)
+        bne x14, x13, 1b
+        addi tos, tos, 8
+        srli x14, x15, 12
+        slli x14, x14, cell_bits - 20
+        srai x14, x14, (cell_bits - 20) - 12
+        j 4b
+5:      lhu x13, 2(tos)
+        slli x13, x13, 16
+        or x15, x15, x13
+        # Check for addi tos, tos, imm
+        li x13, 0xFFFFF
+        and x13, x13, x15
+        li x12, (8 << 15) | (8 << 7) | (0x13 << 0)
+        bne x13, x12, 1b
+        addi tos, tos, 4
+        srli x12, x15, 20
+        slli x12, x12, cell_bits - 12
+        srai x12, x12, cell_bits - 12
+6:      add x14, x14, x12
+3:      sub dp, dp, -2*cell
+        sc tos, cell(dp)
+        sc x14, 0(dp)
+        li tos, true_value
+        ret
+        end_inlined
+
+        ## This only folds words in M0
 	define_internal_word "fold,", visible_flag
 _asm_fold:
 	b _asm_inline
