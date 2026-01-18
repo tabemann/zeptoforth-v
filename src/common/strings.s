@@ -47,6 +47,7 @@ _skip_to_token:
         end_inlined
 	
 	## Parse to a character in the input stream
+        ## ( -- c-addr bytes )
 	define_internal_word "parse-to-char", visible_flag
 _parse_to_char:
         mv x15, tos
@@ -132,6 +133,7 @@ _compile_imm_cstring:
 	end_inlined
 
 	## Compile a counted-string
+        ## ( c-addr bytes -- )
 	define_word "compile-cstring", visible_flag
 _compile_cstring:
         push ra
@@ -159,7 +161,8 @@ _compile_cstring:
         ret
         end_inlined
 	
-	@@ Parse a character and put it on the stack
+	## Parse a character and put it on the stack
+        ## ( "c" -- char )
 	define_word "char", visible_flag
 _char:	push ra
         call _token
@@ -169,7 +172,8 @@ _char:	push ra
         ret
 	end_inlined
 
-	@@ Parse a character and compile it
+	## Parse a character and compile it
+        ## Compile-time ( "c" -- ) Runtime ( -- char )
 	define_word "[char]", visible_flag | immediate_flag | compiled_flag
 _compile_char:
         push ra
@@ -179,7 +183,8 @@ _compile_char:
         ret
         end_inlined
 
-	@@ Type an integer without a following space
+	## Type an integer without a following space
+        ## ( n -- )
 	define_word "(.)", visible_flag
 _type_integer:
         addi sp, sp, -2*cell
@@ -200,7 +205,8 @@ _type_integer:
         ret
         end_inlined
 
-	@@ Type an unsigned integer without a following space
+	## Type an unsigned integer without a following space
+        ## ( u -- )
 	define_word "(u.)", visible_flag
 _type_unsigned:
         addi sp, sp, -2*cell
@@ -221,7 +227,8 @@ _type_unsigned:
         ret
         end_inlined
 
-	@@ Type an unsigned hexadecimal integer safely without a following space
+	## Type an unsigned hexadecimal integer safely without a following space
+        ## ( u -- )
 	define_word "debugu.", visible_flag
 _debug_unsigned:
         addi sp, sp, -3*cell
@@ -252,7 +259,8 @@ _debug_unsigned:
         ret
         end_inlined
 
-	@@ Type an integer with a following space
+	## Type an integer with a following space
+        ## ( n -- )
 	define_word ".", visible_flag
 _type_space_integer:
         push ra
@@ -262,7 +270,8 @@ _type_space_integer:
         ret
 	end_inlined
 
-	@@ Type an unsigned integer with a following space
+	## Type an unsigned integer with a following space
+        ## ( u -- )
 	define_word "u.", visible_flag
 _type_space_unsigned:
         push ra
@@ -272,7 +281,8 @@ _type_space_unsigned:
         ret
 	end_inlined
 	
-	@@ Copy bytes from one buffer to another one (which may overlap)
+	## Copy bytes from one buffer to another one (which may overlap)
+        ## ( src-addr dest-addr bytes -- )
 	define_word "move", visible_flag
 _move:  pop ra
         lc x15, 0(dp)
@@ -285,7 +295,8 @@ _move:  pop ra
         ret
         end_inlined
 
-	@@ Copy bytes starting at a high address
+	## Copy bytes starting at a high address
+        ## ( src-addr dest-addr bytes -- )
 	define_internal_word "<move", visible_flag
 _move_from_high:
         mv x15, tos
@@ -305,7 +316,8 @@ _move_from_high:
 2:      ret
         end_inlined
 
-	@@ Copy bytes starting at a low address
+	## Copy bytes starting at a low address
+        ## ( src-addr dest-addr bytes -- )
 	define_internal_word "move>", visible_flag
 _move_from_low:
         mv x15, tos
@@ -323,7 +335,8 @@ _move_from_low:
 2:      ret
         end_inlined
 
-	@@ Reverse bytes in place
+	## Reverse bytes in place
+        ## ( addr bytes -- )
 	define_word "reverse", visible_flag
 _reverse:
         mv x15, tos
@@ -343,7 +356,8 @@ _reverse:
 2:      ret
         end_inlined
 
-	@@ Format an unsigned integer as a string
+	## Format an unsigned integer as a string
+        ## ( addr u -- addr bytes )
 	define_word "format-unsigned", visible_flag
 _format_unsigned:
         addi sp, sp, -3*cell
@@ -379,7 +393,8 @@ _format_unsigned:
         ret
         end_inlined
 	
-	@@ Format an integer as a string
+	## Format an integer as a string
+        ## ( addr n -- addr bytes )
 	define_word "format-integer", visible_flag
 _format_integer:
         addi sp, sp, -3*cell
@@ -424,7 +439,8 @@ _format_integer:
         ret
 	end_inlined
 
-	@@ The inner portion of formatting an integer as a string
+	## The inner portion of formatting an integer as a string
+        ## ( u -- bytes )
 	define_internal_word "format-integer-inner", visible_flag
 _format_integer_inner:
         push ra
@@ -466,7 +482,7 @@ _format_integer_inner:
         ret # Dummy instruction
 	end_inlined
 
-        @ Exception handler for invalid BASE values
+        ## Exception handler for invalid BASE values
         define_word "x-invalid-base", visible_flag
 _invalid_base:
         push ra
