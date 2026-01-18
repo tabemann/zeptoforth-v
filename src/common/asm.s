@@ -1041,575 +1041,586 @@ _asm_do_extract_constant:
         ret
         end_inlined
 
-        ## This only folds words in M0
+        ## Only kept for compatibility
 	define_internal_word "fold,", visible_flag
 _asm_fold:
-	b _asm_inline
-	bx lr
+	j _asm_inline
+	ret # Dummy instruction
 	end_inlined
 
 	## Inline a word
 	define_internal_word "inline,", visible_flag
 _asm_inline:
-	push {lr}
-	push_tos
-	bl _asm_extract_constant
-	cmp tos, #0
-	beq 1f
-	pull_tos
-	bl _asm_undefer_lit
-	ldr r0, =-1
-	ldr r1, =literal_deferred_q
-	str r0, [r1]
-	ldr r1, =deferred_literal
-	str tos, [r1]
-	adds dp, #4
-	pull_tos
-	pop {pc}	
-1:	adds dp, #4
-	pull_tos
-	ldr r1, =literal_deferred_q
-	ldr r0, [r1]
-	cmp r0, #0
-	bne 1f
-	bl _asm_do_inline
-	pop {pc}
-1:	ldr r0, =_add
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_add
-	pop {pc}
-1:	ldr r0, =_sub
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_sub
-	pop {pc}
-1:	ldr r0, =_mul
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_mul
-	pop {pc}
-1:	ldr r0, =_div
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_div
-	pop {pc}
-1:	ldr r0, =_udiv
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_udiv
-	pop {pc}
-1:	ldr r0, =_and
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_and
-	pop {pc}
-1:	ldr r0, =_or
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_or
-	pop {pc}
-1:	ldr r0, =_xor
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_xor
-	pop {pc}
-1:	ldr r0, =_lshift
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_lshift
-	pop {pc}
-1:	ldr r0, =_rshift
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_rshift
-	pop {pc}
-1:	ldr r0, =_arshift
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_arshift
-	pop {pc}
-1:	ldr r0, =_store_1
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_store_1
-	pop {pc}
-1:	ldr r0, =_store_2
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_store_2
-	pop {pc}
-1:	ldr r0, =_store_4
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_store_4
-	pop {pc}
-1:	ldr r0, =_pick
-	cmp tos, r0
-	bne 1f
-	pull_tos
-	bl _asm_fold_pick
-	pop {pc}
-1:	bl _asm_undefer_lit
-	bl _asm_do_inline
-	pop {pc}
-	end_inlined
+        push ra
+        push_tos
+        call _asm_extract_constant
+        beq tos, zero, 1f
+        pull_tos
+        call _asm_undefer_lit
+        li x15, true_value
+        li x14, literal_deferred_q
+        sc x15, 0(x14)
+        li x14, deferred_literal
+        sc tos, 0(x14)
+        pull_tos
+        j 3f
+1:      addi dp, dp, cell
+        pull_tos
+        li x14, literal_deferred_q
+        lc x15, 0(x14)
+        bne x15, zero, 1f
+        call _asm_do_inline
+        j 2f
+1:      mv x14, tos
+        pull_tos
+        li x15, _add
+        bne x14, x15, 1f
+        call _asm_fold_add
+        j 2f
+1:      li x15, _sub
+        bne x14, x15, 1f
+        call _asm_fold_sub
+        j 2f
+1:      li x15, _mul
+        bne x14, x15, 1f
+        call _asm_fold_mul
+        j 2f
+1:      li x15, _div
+        bne x14, x15, 1f
+        call _asm_fold_div
+        j 2f
+1:      li x15, _udiv
+        bne x14, x15, 1f
+        call _asm_fold_udiv
+        j 2f
+1:      li x15, _mod
+        bne x14, x15, 1f
+        call _asm_fold_mod
+        j 2f
+1:      li x15, _umod
+        bne x14, x15, 1f
+        call _asm_fold_umod
+        j 2f
+1:      li x15, _and
+        bne x14, x15, 1f
+        call _asm_fold_and
+        j 2f
+1:      li x15, _or
+        bne x14, x15, 1f
+        call _asm_fold_or
+        j 2f
+1:      li x15, _xor
+        bne x14, x15, 1f
+        call _asm_fold_xor
+        j 2f
+1:      li x15, _lshift
+        bne x14, x15, 1f
+        call _asm_fold_lshift
+        j 2f
+1:      li x15, _rshift
+        bne x14, x15, 1f
+        call _asm_fold_rshift
+        j 2f
+1:      li x15, _arshift
+        bne x14, x15, 1f
+        call _asm_fold_arshift
+        j 2f
+1:      li x15, _store_1
+        bne x14, x15, 1f
+        call _asm_fold_store_1
+        j 2f
+1:      li x15, _store_2
+        bne x14, x15, 1f
+        call _asm_fold_store_2
+        j 2f
+1:      li x15, _store_4
+        bne x14, x15, 1f
+        call _asm_fold_store_4
+        j 2f
+1:      li x15, _store_cell
+        bne x14, x15, 1f
+        call _asm_fold_store_4 # Change for 64-bit
+        j 2f
+1:      li x15, _pick
+        bne x14, x15, 1f
+        call _asm_fold_pick
+        j 2f
+1:      call _asm_undefer_lit
+        call _asm_do_inline
+2:      li x15, literal_deferred_q
+        li x14, false_value
+        sc x14, 0(x15)
+3:      pop ra
+        ret
+        end_inlined
 
 	## Constant fold +
 	define_internal_word "fold+", visible_flag
 _asm_fold_add:
-	push {lr}
-	ldr r0, =deferred_literal
-	ldr r1, [r0]
-	ldr r2, =255
-	cmp r1, r2
-	bgt 2f
-	cmp r1, #0
-	blt 1f
-	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, #6
-	bl _asm_add_imm
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-1:	mvns r3, r1
-	adds r3, #1
-	cmp r3, r2
-	bhi 2f
-	push_tos
-	movs tos, r3
-	push_tos
-	movs tos, #6
-	bl _asm_sub_imm
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-2:	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0x1836
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
+        push ra
+        li x15, deferred_literal
+        lc x15, 0(x15)
+        beq x15, zero, 3f
+        li x14, -0x20
+        blt x15, x14, 1f
+        li x14, 0x1F
+        blt x14, x15, 1f
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        li tos, 8 # TOS
+        call _asm_c_addi
+        j 3f
+1:      li x14, -0x800
+        blt x15, x14, 2f
+        li x14, 0x7FF
+        blt x14, x15, 2f
+        addi dp, dp, -3*cell
+        sc tos, 2*cell(dp)
+        sc x15, 1*cell(dp)
+        li tos, 8 # TOS
+        sc tos, 0(dp)
+        call _asm_addi
+        j 3f
+2:      addi dp, dp -2*cell
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile c.add tos, x15
+        li tos, (4 << 13) | (1 << 12) | (8 << 7) | (15 << 2) | (2 << 0)
+        call _current_comma_2
+3:      pop ra
+        ret
+        end_inlined
 
 	## Constant fold -
 	define_internal_word "fold-", visible_flag
 _asm_fold_sub:
-	push {lr}
-	ldr r0, =deferred_literal
-	ldr r1, [r0]
-	ldr r2, =255
-	cmp r1, r2
-	bgt 2f
-	cmp r1, #0
-	blt 1f
-	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, #6
-	bl _asm_sub_imm
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-1:	mvns r3, r1
-	adds r3, #1
-	cmp r3, r2
-	bhi 2f
-	push_tos
-	movs tos, r3
-	push_tos
-	movs tos, #6
-	bl _asm_add_imm
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-2:	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0x1A36
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
+        li x15, deferred_literal
+        lc x14, 0(x15)
+        not x14, x14
+        addi x14, x14, 1
+        sc x14, 0(x15)
+        j _asm_fold_add
+        ret # Dummy instruction
+        end_inlined
 
 	## Constant fold *
 	define_internal_word "fold*", visible_flag
 _asm_fold_mul:
-	push {lr}
-	push_tos
-	ldr r0, =deferred_literal
-	ldr tos, [r0]
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0x4346
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
+        push ra
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li x15, deferred_literal
+        lc x15, 0(x15)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile mul tos, tos, x15
+        li tos, (1 << 25) | (15 << 20) | (8 << 15) | (8 << 7) | (0x33 << 0)
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
 
 	## Constant fold /
 	define_internal_word "fold/", visible_flag
 _asm_fold_div:
-	push {lr}
-	push_tos
-	ldr r0, =deferred_literal
-	ldr tos, [r0]
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0xFB96
-	bl _current_comma_2
-	push_tos
-	ldr tos, =0xF6F0
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
+        push ra
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li x15, deferred_literal
+        lc x15, 0(x15)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile div tos, tos, x15
+        li tos, (1 << 25) | (15 << 20) | (8 << 15) | (4 << 12) | (8 << 7) | (0x33 << 0)
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
 
 	## Constant fold u/
 	define_internal_word "foldu/", visible_flag
 _asm_fold_udiv:
-	push {lr}
-	push_tos
-	ldr r0, =deferred_literal
-	ldr tos, [r0]
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0xFBB6
-	bl _current_comma_2
-	push_tos
-	ldr tos, =0xF6F0
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
+        push ra
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li x15, deferred_literal
+        lc x15, 0(x15)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile divu tos, tos, x15
+        li tos, (1 << 25) | (15 << 20) | (8 << 15) | (5 << 12) | (8 << 7) | (0x33 << 0)
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
+
+        ## Constant fold mod
+        define_internal_word "fold-mod", visible_flag
+_asm_fold_mod:
+        push ra
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li x15, deferred_literal
+        lc x15, 0(x15)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile rem tos, tos, x15
+        li tos, (1 << 25) | (15 << 20) | (8 << 15) | (6 << 12) | (8 << 7) | (0x33 << 0)
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
+
+        ## Constant fold umod
+        define_internal_word "fold-umod", visible_flag
+_asm_fold_umod: 
+        push ra
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li x15, deferred_literal
+        lc x15, 0(x15)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile remu tos, tos, x15
+        li tos, (1 << 25) | (15 << 20) | (8 << 15) | (7 << 12) | (8 << 7) | (0x33 << 0)
+        call _current_comma_4
+        pop ra
+        ret
+        end_inlined
 
 	## Constant fold AND
 	define_internal_word "fold-and", visible_flag
 _asm_fold_and:
-	push {lr}
-	ldr r0, =deferred_literal
-	ldr r1, [r0]
-	ldr r2, =255
-	cmp r1, r2
-	bhi 1f
-	push_tos
-	ldr tos, =0xF006
-	push {r1}
-	bl _current_comma_2
-	pop {r1}
-	push_tos
-	ldr tos, =0x0600
-	orrs tos, r1
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-1:	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0x4006
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
-
+        push ra
+        li x15, deferred_literal
+        lc x15, 0(x15)
+        beq x15, zero, 3f
+        li x14, -0x20
+        blt x15, x14, 1f
+        li x14, 0x1F
+        blt x14, x15, 1f
+        # Compile c.andi tos, imm
+        andi x14, x15, 0x20
+        slli x14, x14, 12 - 5
+        andi x13, x15, 0x1F
+        slli x13, x13, 2
+        or x14, x14, x13
+        li x13, (1 << 3) | (2 << 10) | ((8 - 8) << 7) | (1 << 0)
+        push_tos
+        or tos, x14, x13
+        call _current_comma_2
+        j 3f
+1:      li x14, -0x800
+        blt x15, x14, 2f
+        li x14, 0x7FF
+        blt x14, x15, 2f
+        # Compile andi tos, tos, imm
+        slli x15, x15, 20
+        li x14, (8 << 15) | (7 << 12) | (8 << 7) | (0x13 << 0)
+        push_tos
+        or tos, x15, x14
+        call _current_comma_4
+        j 3f
+2:      addi dp, dp -2*cell
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile c.and tos, x15
+        li tos, (4 << 13) | (3 << 10) | ((8 - 8) << 7) | (3 << 5) | ((15 - 8) << 2) | (1 << 0)
+        call _current_comma_2
+3:      pop ra
+        ret
+        end_inlined
+        
 	## Constant fold OR
 	define_internal_word "fold-or", visible_flag
 _asm_fold_or:
-	push {lr}
-	ldr r0, =deferred_literal
-	ldr r1, [r0]
-	ldr r2, =255
-	cmp r1, r2
-	bhi 1f
-	push_tos
-	ldr tos, =0xF046
-	push {r1}
-	bl _current_comma_2
-	pop {r1}
-	push_tos
-	ldr tos, =0x0600
-	orrs tos, r1
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-1:	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0x4306
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
+        push ra
+        li x15, deferred_literal
+        lc x15, 0(x15)
+        beq x15, zero, 3f
+        li x14, -0x800
+        blt x15, x14, 2f
+        li x14, 0x7FF
+        blt x14, x15, 2f
+        # Compile ori tos, tos, imm
+        slli x15, x15, 20
+        li x14, (8 << 15) | (6 << 12) | (8 << 7) | (0x13 << 0)
+        push_tos
+        or tos, x15, x14
+        call _current_comma_4
+        j 3f
+2:      addi dp, dp -2*cell
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile c.or tos, x15
+        li tos, (4 << 13) | (3 << 10) | ((8 - 8) << 7) | (2 << 5) | ((15 - 8) << 2) | (1 << 0)
+        call _current_comma_2
+3:      pop ra
+        ret
+        end_inlined
 
 	## Constant fold XOR
 	define_internal_word "fold-xor", visible_flag
 _asm_fold_xor:
-	push {lr}
-	ldr r0, =deferred_literal
-	ldr r1, [r0]
-	ldr r2, =255
-	cmp r1, r2
-	bhi 1f
-	push_tos
-	ldr tos, =0xF086
-	push {r1}
-	bl _current_comma_2
-	pop {r1}
-	push_tos
-	ldr tos, =0x0600
-	orrs tos, r1
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-1:	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0x4046
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
-
+        push ra
+        li x15, deferred_literal
+        lc x15, 0(x15)
+        beq x15, zero, 3f
+        li x14, -0x800
+        blt x15, x14, 2f
+        li x14, 0x7FF
+        blt x14, x15, 2f
+        # Compile xori tos, tos, imm
+        slli x15, x15, 20
+        li x14, (8 << 15) | (4 << 12) | (8 << 7) | (0x13 << 0)
+        push_tos
+        or tos, x15, x14
+        call _current_comma_4
+        j 3f
+2:      addi dp, dp -2*cell
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile c.xor tos, x15
+        li tos, (4 << 13) | (3 << 10) | ((8 - 8) << 7) | (1 << 5) | ((15 - 8) << 2) | (1 << 0)
+        call _current_comma_2
+3:      pop ra
+        ret
+        end_inlined
+        
 	## Constant fold LSHIFT
 	define_internal_word "fold-lshift", visible_flag
 _asm_fold_lshift:
-	push {lr}
-	ldr r0, =deferred_literal
-	ldr r1, [r0]
-	ldr r2, =31
-	cmp r1, r2
-	bhi 1f
-	push_tos
-	ldr tos, =0x0036
-	lsls r1, #6
-	orrs tos, r1
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-1:	push_tos
-	movs tos, #0
-	push_tos
-	movs tos, #6
-	bl _asm_mov_imm
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
+        li x14, deferred_literal
+        lc x15, 0(x14)
+        blt x15, zero, 1f
+        beq x15, zero, 3f
+        li x14, cell_bits - 1
+        bgt x15, x14, 2f
+        # Compile c.slli tos, uimm
+        andi x14, x15, 0x20
+        slli x14, x14, 12 - 5
+        andi x13, x15, 0x1F
+        slli x13, x13, 2
+        or x14, x14, x13
+        li x13, (0 << 13) | (8 << 7) | (2 << 0)
+        push_tos
+        or tos, x14, x13
+        j _current_comma_2
+1:      not x15, x15
+        addi x15, x15, 1
+        sc x15, 0(x14)
+        J _asm_fold_rshift
+2:      addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li tos, 0
+        sc tos, 0(dp)
+        li tos, 8 # TOS
+        j _asm_c_li
+3:      ret
+        end_inlined
 
 	## Constant fold RSHIFT
 	define_internal_word "fold-rshift", visible_flag
 _asm_fold_rshift:
-	push {lr}
-	ldr r0, =deferred_literal
-	ldr r1, [r0]
-	ldr r2, =31
-	cmp r1, r2
-	bhi 1f
-	push_tos
-	ldr tos, =0x0836
-	lsls r1, #6
-	orrs tos, r1
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-1:	push_tos
-	movs tos, #0
-	push_tos
-	movs tos, #6
-	bl _asm_mov_imm
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
+        li x14, deferred_literal
+        lc x15, 0(x14)
+        blt x15, zero, 1f
+        beq x15, zero, 3f
+        li x14, cell_bits - 1
+        bgt x15, x14, 2f
+        # Compile c.srli tos, uimm
+        andi x14, x15, 0x20
+        slli x14, x14, 12 - 5
+        andi x13, x15, 0x1F
+        slli x13, x13, 2
+        or x14, x14, x13
+        li x13, (4 << 13) | ((8 - 8) << 7) | (1 << 0)
+        push_tos
+        or tos, x14, x13
+        j _current_comma_2
+1:      not x15, x15
+        addi x15, x15, 1
+        sc x15, 0(x14)
+        J _asm_fold_lshift
+2:      addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        li tos, 0
+        sc tos, 0(dp)
+        li tos, 8 # TOS
+        j _asm_c_li
+3:      ret
+        end_inlined
 
-	## Constant fold ARSHIFT
+	## Constant fold ARSHIFT -- note that a shift of the cell size in bits
+        ## is turned into a shift of the cell size in bits minus one for
+        ## consistency with ARM Cortex-M
 	define_internal_word "fold-arshift", visible_flag
 _asm_fold_arshift:
-	push {lr}
-	ldr r0, =deferred_literal
-	ldr r1, [r0]
-	ldr r2, =32
-	cmp r1, r2
-	blo 1f
-	movs r1, #31
-1:	push_tos
-	ldr tos, =0x1036
-	lsls r1, #6
-	orrs tos, r1
-	bl _current_comma_2
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-	end_inlined
+        li x14, deferred_literal
+        lc x15, 0(x14)
+        blt x15, zero, 1f
+        beq x15, zero, 3f
+        li x14, cell_bits - 1
+        bgt x15, x14, 2f
+        # Compile c.srai tos, uimm
+4:      andi x14, x15, 0x20
+        slli x14, x14, 12 - 5
+        andi x13, x15, 0x1F
+        slli x13, x13, 2
+        or x14, x14, x13
+        li x13, (4 << 13) | (1 << 10) | ((8 - 8) << 7) | (1 << 0)
+        push_tos
+        or tos, x14, x13
+        j _current_comma_2
+1:      not x15, x15
+        addi x15, x15, 1
+        sc x15, 0(x14)
+        J _asm_fold_lshift
+2:      li x15, cell_bits - 1
+        j 4b
+3:      ret
+        end_inlined
 
 	## Constant fold B!
 	define_internal_word "fold-c!", visible_flag
 _asm_fold_store_1:
-	push {lr}
-	push_tos
-	ldr r0, =deferred_literal
-	ldr tos, [r0]
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0x7006
-	bl _current_comma_2
-	push_tos
-	movs tos, #6
-	bl _asm_pull
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
+        push ra
+        addi dp, dp, -2*cell
+        li x15, deferred_literal
+        li x15, 0(x15)
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile sb tos, 0(x15)
+        li tos, (8 << 20) | (15 << 15) | (0 << 12) | (0x23 << 0)
+        call _current_comma_4
+        push_tos
+        li tos, 8 # TOS
+        call _asm_pull
+        pop ra
+        ret
 	end_inlined
 
 	## Constant fold H!
 	define_internal_word "fold-h!", visible_flag
 _asm_fold_store_2:
-	push {lr}
-	push_tos
-	ldr r0, =deferred_literal
-	ldr tos, [r0]
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0x8006
-	bl _current_comma_2
-	push_tos
-	movs tos, #6
-	bl _asm_pull
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
+        push ra
+        addi dp, dp, -2*cell
+        li x15, deferred_literal
+        li x15, 0(x15)
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile sh tos, 0(x15)
+        li tos, (8 << 20) | (15 << 15) | (1 << 12) | (0x23 << 0)
+        call _current_comma_4
+        push_tos
+        li tos, 8 # TOS
+        call _asm_pull
+        pop ra
+        ret
 	end_inlined
 
 	## Constant fold !
 	define_internal_word "fold-!", visible_flag
 _asm_fold_store_4:
-	push {lr}
-	push_tos
-	ldr r0, =deferred_literal
-	ldr tos, [r0]
-	push_tos
-	movs tos, #0
-	bl _asm_literal
-	push_tos
-	ldr tos, =0x6006
-	bl _current_comma_2
-	push_tos
-	movs tos, #6
-	bl _asm_pull
-	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
+        push ra
+        addi dp, dp, -2*cell
+        li x15, deferred_literal
+        li x15, 0(x15)
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        li tos, 15 # x15
+        call _asm_literal
+        push_tos
+        # Compile c.sw tos, 0(x15)
+        li tos, (6 << 13) | ((15 - 8) << 7) | ((8 - 8) << 2) | (0 << 0)
+        call _current_comma_2
+        push_tos
+        li tos, 8 # TOS
+        call _asm_pull
+        pop ra
+        ret
 	end_inlined
 
 	## Constant fold PICK
 	define_internal_word "fold-pick", visible_flag
 _asm_fold_pick:
-	push {lr}
-	ldr r0, =deferred_literal
-	ldr r0, [r0]
-	cmp r0, #0x1F
-	bhi 1f
-	push_tos
-	movs tos, #6
-	push {r0}
-	bl _asm_push
-	pop {r0}
-	cmp r0, #0
-	beq 2f
-	push_tos
-	lsls tos, r0, #2
-	push_tos
-	movs tos, #7
-	push_tos
-	movs tos, #6
-	bl _asm_ldr_imm
-2:	ldr r1, =literal_deferred_q
-	movs r2, #0
-	str r2, [r1]
-	pop {pc}
-1:	bl _asm_undefer_lit
-	push_tos
-	ldr tos, =_pick
-	bl _asm_do_inline
-	pop {pc}
+        push ra
+        push_tos
+        li tos, 8 # TOS
+        call _asm_push
+        li x15, deferred_literal
+        li x15, 0(x15)
+        li x14, cell
+        mul x15, x15, x14
+        li x14, 0x7F
+        bgtu x15, x14, 1f
+        # Compile c.lw tos, uimm(dp)
+        andi x14, x15, 0x38
+        slli x14, x14, 10 - 3
+        andi x13, x15, 4
+        slli x13, x13, 6 - 2
+        or x14, x14, x13
+        andi x13, x15, 0x40
+        srli x13, x13, 6 - 5
+        or x14, x14, x13
+        li x13, (2 << 13) | ((9 - 8) << 7) | ((8 - 8) << 2) | (0 << 0)
+        push_tos
+        or tos, x14, x13
+        call _current_comma_2
+        j 3f
+1:      li x14, 0x7FF
+        bgtu x15, x14, 2f
+        # Compile lw tos, imm(dp)
+        slli x15, x15, 20
+        li x14, (9 << 15) | (2 << 12) | (8 << 7) | (0x03 << 0)
+        push_tos
+        or tos, x15, x14
+        call _current_comma_4
+        j 3f
+2:      addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        sc x15, 0(dp)
+        li tos, 8 # TOS
+        call _asm_literal
+        # Compile c.add tos, dp
+        push_tos
+        li tos, (4 << 13) | (1 << 12) | (8 << 7) | (9 << 2) | (2 << 0)
+        call _current_comma_2
+        # Compile c.lw tos, 0(tos)
+        push_tos
+        li tos, (2 < 13) | ((8 - 8) << 7) | ((8 - 8) << 2) | (0 << 0)
+        call _current_comma_2
+3:      pop ra
+        ret
 	end_inlined
 	
 	## Actually inline a word
