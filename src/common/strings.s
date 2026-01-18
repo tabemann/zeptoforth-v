@@ -21,522 +21,457 @@
 	## Advance one character if possible
 	define_word "advance-once", visible_flag
 _advance_once:
-	ldr r0, =eval_index_ptr
-	ldr r0, [r0]
-	ldr r1, [r0]
-	ldr r2, =eval_count_ptr
-	ldr r2, [r2]
-	ldr r3, [r2]
-	cmp r1, r3
-	beq 1f
-	adds r1, #1
-	str r1, [r0]
-1:	bx lr
-	end_inlined
+        li x15, eval_index_ptr
+        lc x15, 0(x15)
+        lc x14, 0(x15)
+        li x13, eval_count_ptr
+        lc x13, 0(x13)
+        lc x12, 0(x13)
+        beq x14, x12, 1f
+        addi x14, x14, 1
+        sc x14, 0(x15)
+1:      ret
+        end_inlined
 	
 	## Skip to the start of a token
 	define_internal_word "skip-to-token", visible_flag
 _skip_to_token:
-	push {lr}
-	bl _token_start
-	ldr r0, =eval_index_ptr
-	ldr r0, [r0]
-	str tos, [r0]
-	pull_tos
-	pop {pc}
-	end_inlined
+        push ra
+        call _token_start
+        li x15, eval_index_ptr
+        lc x15, 0(x15)
+        sc tos, 0(x15)
+        pull_tos
+        pop ra
+        ret
+        end_inlined
 	
 	## Parse to a character in the input stream
 	define_internal_word "parse-to-char", visible_flag
 _parse_to_char:
-	movs r0, tos
-	ldr r1, =eval_index_ptr
-	ldr r1, [r1]
-	ldr r1, [r1]
-	ldr r2, =eval_count_ptr
-	ldr r2, [r2]
-	ldr r2, [r2]
-	ldr r3, =eval_ptr
-	ldr r3, [r3]
-	adds r1, r1, r3
-	adds r2, r2, r3
-1:	cmp r1, r2
-	beq 2f
-	ldrb r3, [r1]
-	cmp r3, r0
-	beq 2f
-	adds r1, #1
-	b 1b
-2:	ldr r0, =eval_index_ptr
-	ldr r0, [r0]
-	ldr r2, [r0]
-	ldr r3, =eval_ptr
-	ldr r3, [r3]
-	adds tos, r2, r3
-	push_tos
-	subs r1, r1, r3
-	subs tos, r1, r2
-	ldr r2, =eval_count_ptr
-	ldr r2, [r2]
-	ldr r2, [r2]
-	cmp r1, r2
-	beq 3f
-	adds r1, #1
-3:      str r1, [r0]
-        bx lr
+        mv x15, tos
+        li x14, eval_index_ptr
+        lc x14, 0(x14)
+        lc x14, 0(x14)
+        li x13, eval_count_ptr
+        lc x13, 0(x13)
+        lc x13, 0(x13)
+        li x12, eval_ptr
+        lc x12, 0(x12)
+        add x14, x14, x12
+        add x13, x13, x12
+1:      beq x14, x13, 2f
+        lbu x12, 0(x14)
+        beq x12, x15, 2f
+        addi x14, x14, 1
+        b 1b
+2:      li x15, eval_index_ptr
+        lc x15, 0(x15)
+        lc x13, 0(x15)
+        li x12, eval_ptr
+        lc x12, 0(x12)
+        add tos, x13, x12
+        push_tos
+        sub x14, x14, x12
+        sub tos, x14, x13
+        li x13, eval_count_ptr
+        lc x13, 0(x13)
+        lc x13, 0(x13)
+        beq x14, x12, 3f
+        addi x14, x14, 1
+3:      sc x14, 0(x15)
+        ret
+        end_inlined
 
 	## Immediately type a string in the input stream
 	define_word ".(", visible_flag | immediate_flag
 _type_to_paren:
-	push {lr}
-	push_tos
-	movs tos, #0x29
-	bl _parse_to_char
-	bl _type
-	pop {pc}
-	end_inlined
+        push ra
+        push_tos
+        li tos, 0x29
+        call _parse_to_char
+        call _type
+        pop ra
+        ret
+        end_inlined
 
 	## Print a string immediately
 	define_word ".\"", visible_flag | immediate_flag | compiled_flag
 _type_compiled:
-	push {lr}
-	bl _compile_imm_string
-	push_tos
-	ldr tos, =_type
-	bl _asm_call
-	pop {pc}
-	end_inlined
+        push ra
+        call _compile_imm_string
+        push_tos
+        li tos, _type
+        call _asm_call
+        pop ra
+        ret
+        end_inlined
 	
 	## Compile a non-counted string
 	define_word "s\"", visible_flag | immediate_flag | compiled_flag
 _compile_imm_string:
-	push {lr}
-	bl _compile_imm_cstring
-	push_tos
-	ldr tos, =_count
-	bl _asm_call
-	pop {pc}
-	end_inlined
+        push ra
+        call _compile_imm_cstring
+        push_tos
+        li tos, _count
+        call _asm_call
+        pop ra
+        ret
+        end_inlined
 
 	## Compile a counted-string
 	define_word "c\"", visible_flag | immediate_flag | compiled_flag
 _compile_imm_cstring:
-	push {lr}
-	push_tos
-	movs tos, #0x22
-	bl _parse_to_char
-	bl _compile_cstring
-	pop {pc}
+        push ra
+        push_tos
+        li tos, 0x22
+        call _parse_to_char
+        call _compile_cstring
+        pop ra
+        ret
 	end_inlined
 
 	## Compile a counted-string
 	define_word "compile-cstring", visible_flag
 _compile_cstring:
-	push {lr}
-	bl _asm_undefer_lit
-	push_tos
-	movs tos, #6
-	bl _asm_push
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	movs tos, #8
-	push_tos
-	movs tos, #6
-	push {r0, r1}
-	bl _asm_adr
-	bl _current_here
-	pop {r0, r1}  
-	adds tos, tos, r0
-	adds tos, #7
-	movs r2, #1
-	tst tos, r2
-	bne 1f
-	push {r0, r1}
-	bl _asm_branch
+        push ra
+        call _asm_undefer_lit
         push_tos
-        ldr tos, =0xBF00 ## NOP
-        bl _current_comma_2
+        li tos, 8 # TOS
+        call _asm_push
+        call _asm_reserve_branch
         push_tos
-        ldr tos, =start_string
-        bl _current_comma_2
-	pop {r0, r1}
-	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, r0
-	bl _current_comma_cstring
-	pop {pc}
-1:	adds tos, #1
-	push {r0, r1}
-	bl _asm_branch
+        li tos, 1 # C.NOP
+        call _current_comma_2
         push_tos
-        ldr tos, =0xBF00 @@ NOP
-        bl _current_comma_2
+        li tos, start_string
+        call _current_comma_2
+        call _rot
+        call _rot
+        call _current_comma_cstring
         push_tos
-        ldr tos, =start_string
-        bl _current_comma_2
-	pop {r0, r1}
-	push_tos
-	movs tos, r1
-	push_tos
-	movs tos, r0
-	bl _current_comma_cstring
-	push_tos
-	movs tos, #0
-	bl _current_comma_1
-	pop {pc}
-	end_inlined
-
-	.ltorg
+        li tos, 2
+        call _current_align
+        call _current_here
+        call _swap
+        call _asm_branch_back
+        pop ra
+        ret
+        end_inlined
 	
 	@@ Parse a character and put it on the stack
 	define_word "char", visible_flag
-_char:	push {lr}
-	bl _token
-	pull_tos
-	ldrb tos, [tos]
-	pop {pc}
+_char:	push ra
+        call _token
+        pull_tos
+        lbu tos, 0(tos)
+        pop ra
+        ret
 	end_inlined
 
 	@@ Parse a character and compile it
 	define_word "[char]", visible_flag | immediate_flag | compiled_flag
 _compile_char:
-	push {lr}
-	bl _char
-	bl _comma_lit
-	pop {pc}
-	end_inlined
+        push ra
+        call _char
+        call _comma_lit
+        pop ra
+        ret
+        end_inlined
 
 	@@ Type an integer without a following space
 	define_word "(.)", visible_flag
 _type_integer:
-	push {lr}
-	bl _here
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	movs tos, r0
-	push_tos
-	movs tos, r1
-	bl _format_integer
-	movs r0, tos
-	push_tos
-	push {r0}
-	bl _allot
-	bl _type
-	pop {r0}
-	push_tos
-	rsbs tos, r0, #0
-	bl _allot
-	pop {pc}
-	end_inlined
+        addi sp, sp, -2*cell
+        scsp ra, 0(sp)
+        call _here
+        call _swap
+        call _format_integer
+        scsp tos, cell(sp)
+        push_tos
+        call _allot
+        call _type
+        push_tos
+        lcsp tos, cell(sp)
+        sub tos, zero, tos
+        call _allot
+        lcsp ra, 0(sp)
+        addi sp, sp, 2*cell
+        ret
+        end_inlined
 
 	@@ Type an unsigned integer without a following space
 	define_word "(u.)", visible_flag
 _type_unsigned:
-	push {lr}
-	bl _here
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	movs tos, r0
-	push_tos
-	movs tos, r1
-	bl _format_unsigned
-	movs r0, tos
-	push_tos
-	push {r0}
-	bl _allot
-	bl _type
-	pop {r0}
-	push_tos
-	rsbs tos, r0, #0
-	bl _allot
-	pop {pc}
-	end_inlined
+        addi sp, sp, -2*cell
+        scsp ra, 0(sp)
+        call _here
+        call _swap
+        call _format_unsigned
+        scsp tos, cell(sp)
+        push_tos
+        call _allot
+        call _type
+        push_tos
+        lcsp tos, cell(sp)
+        sub tos, zero, tos
+        call _allot
+        lcsp ra, 0(sp)
+        addi sp, sp, 2*cell
+        ret
+        end_inlined
 
 	@@ Type an unsigned hexadecimal integer safely without a following space
 	define_word "debugu.", visible_flag
 _debug_unsigned:
-	push {lr}
-	bl _base
-	ldr r0, [tos]
-	pull_tos
-	ldr r2, [r0]
-	movs r1, #16
-	str r1, [r0]
-	push {r1, r2}
-	bl _here
-	pop {r1, r2}
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	movs tos, r0
-	push_tos
-	movs tos, r1
-	bl _format_unsigned
-	movs r0, tos
-	push_tos
-	push {r0, r2}
-	bl _allot
-	bl _serial_type
-	pop {r0, r2}
-	push_tos
-	rsbs tos, r0, #0
-	bl _allot
-	push {r2}
-	bl _base
-	pop {r2}
-	str r2, [tos]
-	pull_tos
-	pop {pc}
-	end_inlined
+        addi sp, sp, -3*cell
+        scsp ra, 0(sp)
+        call _base
+        lc x15, 0(tos)
+        pull_tos
+        lc x13, 0(x15)
+        li x14, 16
+        sc x15, 0(x15)
+        scsp x13, 2*cell(sp)
+        call _here
+        call _swap
+        call _format_unsigned
+        scsp tos, 1*cell(sp)
+        push_tos
+        call _allot
+        call _serial_type
+        push_tos
+        lcsp tos, 1*cell(sp)
+        sub tos, zero, tos
+        call _allot
+        call _base
+        lcsp x13, 2*cell(sp)
+        sc x13, 0(tos)
+        lcsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
+        end_inlined
 
 	@@ Type an integer with a following space
 	define_word ".", visible_flag
 _type_space_integer:
-	push {lr}
-	bl _type_integer
-	bl _space
-	pop {pc}
+        push ra
+        call _type_integer
+        call _space
+        pop ra
+        ret
 	end_inlined
 
 	@@ Type an unsigned integer with a following space
 	define_word "u.", visible_flag
 _type_space_unsigned:
-	push {lr}
-	bl _type_unsigned
-	bl _space
-	pop {pc}
+        push ra
+        call _type_unsigned
+        call _space
+        pop ra
+        ret
 	end_inlined
 	
 	@@ Copy bytes from one buffer to another one (which may overlap)
 	define_word "move", visible_flag
-_move:	push {lr}
-	ldr r0, [dp, #0]
-	ldr r1, [dp, #4]
-	cmp r1, r0
-	bgt 1f
-	bl _move_from_high
-	pop {pc}
-1:	bl _move_from_low
-	pop {pc}
-	end_inlined
+_move:  pop ra
+        lc x15, 0(dp)
+        lc x14, cell(dp)
+        bgtu x14, x15, 1f
+        call _move_from_high
+        j 2f
+1:      call _move_from_low
+2:      pop ra
+        ret
+        end_inlined
 
 	@@ Copy bytes starting at a high address
 	define_internal_word "<move", visible_flag
 _move_from_high:
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	pull_tos
-	movs r2, tos
-	pull_tos
-	adds r1, r1, r0
-	adds r2, r2, r0
-1:	cmp r0, #0
-	beq 2f
-	subs r0, #1
-	subs r1, #1
-	subs r2, #1
-	ldrb r3, [r2]
-	strb r3, [r1]
-	b 1b
-2:	bx lr
+        mv x15, tos
+        lc x14, 0(dp)
+        lc x13, 1*cell(dp)
+        lc tos, 2*cell(dp)
+        addi dp, dp, 3*cell
+        add x14, x14, x15
+        add x13, x13, x15
+1:      beq x15, zero, 2f
+        addi x15, x15, -1
+        addi x14, x14, -1
+        addi x13, x13, -1
+        lbu x12, 0(x13)
+        sb x12, 0(x14)
+        j 1b
+2:      ret
+        end_inlined
 
 	@@ Copy bytes starting at a low address
 	define_internal_word "move>", visible_flag
 _move_from_low:
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	pull_tos
-	movs r2, tos
-	pull_tos
-1:	cmp r0, #0
-	beq 2f
-	subs r0, #1
-	ldrb r3, [r2]
-	strb r3, [r1]
-	adds r1, #1
-	adds r2, #1
-	b 1b
-2:	bx lr
+        mv x15, tos
+        lc x14, 0(dp)
+        lc x13, 1*cell(dp)
+        lc tos, 2*cell(dp)
+        addi dp, dp, 3*cell
+1:      beq x15, zero, 2f
+        addi x15, x15, -1
+        lbu x12, 0(x13)
+        sb x12, 0(x14)
+        addi x14, x14, 1
+        addi x13, x13, 1
+        j 1b
+2:      ret
+        end_inlined
 
 	@@ Reverse bytes in place
 	define_word "reverse", visible_flag
 _reverse:
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	pull_tos
-	adds r0, r0, r1
-	subs r0, #1
-1:	cmp r1, r0
-	bge 2f
-	ldrb r2, [r1]
-	ldrb r3, [r0]
-	strb r2, [r0]
-	strb r3, [r1]
-	adds r1, #1
-	subs r0, #1
-	b 1b
-2:	bx lr
+        mv x15, tos
+        lc x14, 0(dp)
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+        add x15, x15, x14
+        addi x15, x15, -1
+1:      bgeu x14, x15, 2f
+        lbu x13, 0(x14)
+        lbu x12, 0(x15)
+        sb x13, 0(x15)
+        sb x12, 0(x14)
+        addi x14, x14, 1
+        addi x15, x15, -1
+        j 1b
+2:      ret
+        end_inlined
 
 	@@ Format an unsigned integer as a string
 	define_word "format-unsigned", visible_flag
 _format_unsigned:
-	push {lr}
-	cmp tos, #0
-	beq 1f
-	bl _format_integer_inner
-	bl _here
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	movs tos, r0
-	push_tos
-	movs tos, r1
-	push {r0, r1}
-	bl _reverse
-	pop {r0, r1}
-	movs r2, tos
-	movs tos, r0
-	push_tos
-	movs tos, r2
-	push_tos
-	movs tos, r1
-	push {r1, r2}
-	bl _move
-	pop {r1, r2}
-	push_tos
-	movs tos, r2
-	push_tos
-	movs tos, r1
-	pop {pc}
-1:	pull_tos
-	movs r0, #0x30
-	strb r0, [tos]
-	push_tos
-	movs tos, #1
-	pop {pc}
-	end_inlined
+        addi sp, sp, -3*cell
+        scsp ra, 0(sp)
+        beq tos, zero, 1f
+        call _format_integer_inner
+        call _here
+        call _swap
+        lc x15, 0(dp)
+        scsp x15, 1*cell(sp)
+        scsp tos, 2*cell(sp)
+        call _reverse
+        mv x13, tos
+        addi dp, dp, -2*cell
+        lcsp x15, 1*cell(sp)
+        sc x15, cell(dp)
+        sc x13, 0(dp)
+        lcsp tos, 2*cell(sp)
+        scsp x13, 1*cell(sp)
+        call _move
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        lcsp tos, 1*cell(sp)
+        sc tos, 0(dp)
+        lcsp tos, 2*cell(sp)
+        j 2f
+1:      lc x14, 0(dp)
+        li x15, 0x30
+        sb x15, 0(x14)
+        li tos, 1
+2:      lcsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
+        end_inlined
 	
 	@@ Format an integer as a string
 	define_word "format-integer", visible_flag
 _format_integer:
-	push {lr}
-	cmp tos, #0
-	blt 1f
-	beq 2f
-	bl _format_integer_inner
-	bl _here
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-3:	movs tos, r0
-	push_tos
-	movs tos, r1
-	push {r0, r1}
-	bl _reverse
-	pop {r0, r1}
-	movs r2, tos
-	movs tos, r0
-	push_tos
-	movs tos, r2
-	push_tos
-	movs tos, r1
-	push {r1, r2}
-	bl _move
-	pop {r1, r2}
-	push_tos
-	movs tos, r2
-	push_tos
-	movs tos, r1
-	pop {pc}
-1:	rsbs tos, tos, #0
-	bl _format_integer_inner
-	bl _here
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	adds r2, r0, r1
-	movs r3, #0x2D
-	strb r3, [r2]
-	adds r1, #1
-	b 3b
-2:	pull_tos
-	movs r0, #0x30
-	strb r0, [tos]
-	push_tos
-	movs tos, #1
-	pop {pc}
+        addi sp, sp, -3*cell
+        scsp ra, 0(sp)
+        beq tos, zero, 1f
+        blt tos, zero, 3f
+        call _format_integer_inner
+        j 4f
+3:      sub tos, zero, tos
+        call _format_integer_inner
+        lc x15, 0(dp)
+        add x15, x15, tos
+        li x14, 0x2D
+        sb x14, 0(x15)
+        addi tos, tos, 1        
+4:      call _here
+        call _swap
+        lc x15, 0(dp)
+        scsp x15, 1*cell(sp)
+        scsp tos, 2*cell(sp)
+        call _reverse
+        mv x13, tos
+        addi dp, dp, -2*cell
+        lcsp x15, 1*cell(sp)
+        sc x15, cell(dp)
+        sc x13, 0(dp)
+        lcsp tos, 2*cell(sp)
+        scsp x13, 1*cell(sp)
+        call _move
+        addi dp, dp, -2*cell
+        sc tos, cell(dp)
+        lcsp tos, 1*cell(sp)
+        sc tos, 0(dp)
+        lcsp tos, 2*cell(sp)
+        j 2f
+1:      lc x14, 0(dp)
+        li x15, 0x30
+        sb x15, 0(x14)
+        li tos, 1
+2:      lcsp ra, 0(sp)
+        addi sp, sp, 3*cell
+        ret
 	end_inlined
 
 	@@ The inner portion of formatting an integer as a string
 	define_internal_word "format-integer-inner", visible_flag
 _format_integer_inner:
-	push {lr}
-	bl _base
-	ldr r1, [tos]
-	pull_tos
-        cmp r1, #2
-        blt 4f
-        cmp r1, #36
-        bgt 4f
-	push {r1}
-	bl _here
-	pop {r1}
-	movs r0, tos
-	pull_tos
-	movs r2, tos
-1:	cmp r2, #0
-	beq 3f
-	movs tos, r2
-	push_tos
-	movs tos, r1
-	push {r0, r1, r2}
-	bl _umod
-	pop {r0, r1, r2}
-	push_tos
-	movs tos, r2
-	push_tos
-	movs tos, r1
-	push {r0, r1, r2}
-	bl _udiv
-	pop {r0, r1, r2}
-	movs r2, tos
-	pull_tos
-	cmp tos, #10
-	bge 2f
-	adds tos, #0x30
-	strb tos, [r0]
-	adds r0, #1
-	b 1b
-2:	adds tos, #0x37
-	strb tos, [r0]
-	adds r0, #1
-	b 1b
-3:	push {r0}
-	bl _here
-	pop {r0}
-	movs r1, tos
-	pull_tos
-	subs tos, r0, r1
-	pop {pc}
-4:      ldr tos, =_invalid_base
-        bl _raise
-        bx lr
+        push ra
+        call _base
+        lc x14, 0(tos)
+        pull_tos
+        li x15, 2
+        blt x14, x15, 4f
+        li x15, 36
+        bgt x14, x15, 4f
+        call _here
+        mv x15, tos
+        lc x13, 0(dp)
+        lc tos, cell(dp)
+        addi dp, dp, 2*cell
+1:      beq x13, zero, 3f
+        remu x12, x13, x14
+        divu x13, x13, x14
+        li x11, 10
+        bgeu x12, x11, 2f
+        addi x12, x12, 0x30
+5:      sb x12, 0(x15)
+        addi x15, x15, 1
+        j 1b
+2:      addi x12, x12, 0x37
+        j 5b
+3:      push_tos
+        li tos, x15
+        call _here
+        call _swap
+        mv x15, tos
+        pull_tos
+        sub tos, x15, tos
+        pop ra
+        ret
+4:      push_tos
+        li tos, _invalid_base
+        call _raise
+        ret # Dummy instruction
 	end_inlined
 
         @ Exception handler for invalid BASE values
         define_word "x-invalid-base", visible_flag
 _invalid_base:
-        push {lr}
+        push ra
         string_ln "invalid base (less than 2 or greater than 36)"
-        bl _type
-        pop {pc}
+        call _type
+        pop ra
+        ret
         end_inlined
-        
-	.ltorg
