@@ -127,7 +127,7 @@ dp 	.req x9
 
 	## Finish an inlined word
 	.macro end_inlined
-	.hword 0x003F ## movs r7, r7
+	.hword (4 << 13) | (15 << 7) | (15 << 2) | (2 << 0) # c.mv x15, x15
 	.endm
 	
 	## Word header macro

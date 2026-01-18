@@ -749,6 +749,9 @@ _asm_end:
         jalr ra, x15
 2:      call _asm_undefer_lit
         call _asm_exit
+        push_tos
+        li tos, (4 << 13) | (15 << 7) | (15 << 2) | (2 << 0) # c.mv x15, x15
+        call _current_comma_2
 	call _asm_finalize
 	pop ra
         ret
@@ -791,7 +794,6 @@ _asm_commit_flash:
         ret
         end_inlined
 
-	
 	## Compile an unconditional branch
         ## ( branch-addr -- )
 	define_internal_word "branch,", visible_flag
@@ -1624,33 +1626,53 @@ _asm_fold_pick:
 	end_inlined
 	
 	## Actually inline a word
+        ## ( code-addr -- )
 	define_internal_word "do-inline,", visible_flag
 _asm_do_inline:
-	push {lr}
-	ldrh r0, [tos]
-	ldr r1, =0xB500
-	cmp r0, r1
-	bne 1f
-	adds tos, #2
-1:	ldrh r0, [tos]
-	ldr r1, =0xBD00
-	cmp r0, r1
-	beq 3f
-	ldr r1, =0x4770
-	cmp r0, r1
-	beq 3f
-2:	movs r1, tos
-	push_tos
-	movs tos, r0
-	bl _current_comma_2
-	adds tos, #2
-	b 1b
-3:	ldrh r2, [tos, #2]
-	ldr r1, =0x003F
-	cmp r2, r1
-	bne 2f
-	pull_tos
-	pop {pc}
+        push ra
+        lhu x14, 0(tos)
+        # Check for c.addi sp, sp, -cell
+        li x15, (0 << 13) | (1 << 12) | (1 << 7) | ((-cell & 0x1F) << 2) | (1 << 0)
+        bne x14, x15, 1f
+        lhu x14, 2(tos)
+        # Check for c.swsp ra, 0(sp)
+        li x15, (6 << 13) | (1 << 2) | (2 << 0)
+        bne x14, x15, 1f
+        addi tos, tos, 4
+1:      lhu x14, 0(tos)
+        # Check for c.lwsp ra, 0(sp)
+        li x15, (2 << 13) | (1 << 7) | (2 << 0)
+        bne x14, x15, 2f
+        lhu x14, 2(tos)
+        # Check for c.addi sp, sp, cell
+        li x15, (0 << 13) | (2 << 7) | (cell << 2) | (1 << 0)
+        bne x14, x15, 2f
+        lhu x14, 4(tos)
+        # Check for c.jr ra
+        li x15, (4 << 13) | (1 << 7) | (2 << 0)
+        bne x14, x15, 2f
+        lhu x14, 6(tos)
+        # Check for c.mv x15, x15
+        li x15, (4 << 13) | (15 << 7) | (15 << 2) | (2 << 0)
+        bne x14, x15, 2f
+        j 4f
+2:      lhu x14, 0(tos)
+        # Check for c.jr ra
+        li x15, (4 << 13) | (1 << 7) | (2 << 0)
+        bne x14, x15, 3f
+        lhu x14, 2(tos)
+        # Check for c.mv x15, x15
+        li x15, (4 << 13) | (15 << 7) | (15 << 2) | (2 << 0)
+        bne x14, x15, 3f
+        j 4f
+3:      push_tos
+        lhu tos, 0(tos)
+        call _current_comma_2
+        addi tos, tos, 2
+        j 1b
+4:      pull_tos
+        pop ra
+        ret
 	end_inlined
 
 	## Call a word at an address
@@ -1687,35 +1709,6 @@ _asm_call:
 4:      pop ra
         ret
         end_inlined
-        
-	push {lr}
-	bl _asm_undefer_lit
-	movs r0, #-1
-	ldr r1, =suppress_inline
-	str r0, [r1]
-	bl _current_here
-	movs r0, tos
-	pull_tos
-	movs r1, tos
-	subs tos, tos, r0
-	ldr r2, =0x00FFFFFF
-	cmp tos, r2
-	bgt 1f
-	ldr r2, =0xFF000000
-	cmp tos, r2
-	blt 1f
-	bl _asm_bl
-	pop {pc}
-1:	movs tos, r1
-	adds tos, #1
-	push_tos
-	movs tos, #1
-	bl _asm_literal
-	push_tos
-	movs tos, #1
-	bl _asm_blx_reg
-	pop {pc}
-	end_inlined
 	
 	## Undefer a literal
         ## ( -- )
